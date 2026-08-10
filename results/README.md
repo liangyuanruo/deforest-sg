@@ -37,7 +37,7 @@ overlap). Sorted by `area_ha` descending.
 | `forest_area_ha` | Total area of the whole forest polygon (Singapore-clipped) |
 | `threatened_fraction` | `area_ha / forest_area_ha` (0–1); ~1 means the whole patch is zoned for development |
 | `dominant_lu_desc` | The MP2025 land-use class taking the most area of this patch |
-| `lu_desc_breakdown` | JSON string: `{LU_DESC: ha}` across all zones overlapping this patch |
+| `lu_desc_breakdown` | JSON object `{LU_DESC: ha}` across all zones overlapping this patch |
 | `gpr` | Plot ratio(s) of the overlapping zones — numeric gross plot ratio, or a URA code (e.g. `LND`, `EVA`) where no ratio is assigned |
 | `centroid_lon`, `centroid_lat` | A representative point inside the patch (for map labels/markers) |
 | `source_layer` | OSM layer the forest came from (`natural`; `landuse` is empty in this extract) |

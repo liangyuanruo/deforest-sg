@@ -9,8 +9,14 @@ publicly-announced sites (Maju Forest, Gillman Barracks). Outputs feed a separat
 Next.js app for visual storytelling.
 
 ## Hard boundaries
-- **Do not modify `app/`.** It's a separate project with its own `CLAUDE.md`/`README.md`.
-  We only produce analysis (`analysis/`) and data (`results/`).
+- **`app/` is the built dashboard, now folded into this repo** (Aug 2026). The earlier
+  "don't modify `app/`" boundary was lifted by the user to build it: a Next.js 16 +
+  Tailwind v4 + shadcn/ui map app. `app/AGENTS.md` still governs *how* to work inside it —
+  it's a newer Next than your training data, so read `node_modules/next/dist/docs/` first.
+  The app **consumes `results/`**: the pipeline writes `results/`, and the app build copies
+  those files into a **gitignored** `app/public/data/` automatically (via
+  `app/scripts/sync-results.mjs`, run from the `dev`/`build` scripts). The single source of
+  truth stays in `results/` — never duplicated in git.
 - **Treat `data/` as read-only.** Decompressed/intermediate files go to
   `analysis/.cache/` (gitignored), never into `data/` or `results/`.
 
@@ -18,7 +24,13 @@ Next.js app for visual storytelling.
 - **Forest source = OSM `natural='forest'`.** Verified: `landuse='forest'` is **empty**
   in this extract, and official datasets omit secondary forest. Code keeps a defensive
   union with `landuse='forest'` but `natural` is the real source. (~1,142 raw polygons;
-  831 after clipping to Singapore.)
+  831 after clipping to Singapore.) **Why OSM, not official data:** no authoritative
+  *vector* dataset of Singapore's secondary forests exists — NParks/data.gov.sg vectors
+  map only gazetted spaces; the URA plan encodes zoning *intent*, not ground cover; OSM
+  contributors trace satellite imagery into `natural=forest` polygons (physical reality,
+  pre-vectorized). The only authoritative alternative is satellite land-cover *rasters*
+  (ESA WorldCover, Google Dynamic World, Hansen) needing raster→vector conversion +
+  cleanup. Full write-up in `analysis/README.md §7` and the app's About dialog.
 - **Scope = planned footprint under MP2025**, i.e. standing forest on development-zoned
   land. **Not** a delta vs MP2019 — the user explicitly does not want an "increase"
   claim, just what is planned.
@@ -68,9 +80,21 @@ cd analysis && poetry install && poetry run python run_analysis.py
 Env: pyenv Python 3.12.11 (pinned), Poetry 2.x, deps locked in `poetry.lock`. See
 `analysis/README.md` for details.
 
+The app (after regenerating `results/`):
+```bash
+cd app && pnpm install && pnpm dev     # build/dev auto-syncs results/ -> public/data/
+```
+**Deploy:** Vercel project on `liangyuanruo/deforest` with **Root Directory = `app`**,
+Build Command `pnpm build`, *Include files outside the Root Directory* on (so `../results`
+is present at build). Mapbox creds ship as env-overridable in-code defaults in
+`app/lib/mapbox.ts` (`NEXT_PUBLIC_MAPBOX_TOKEN` / `NEXT_PUBLIC_MAPBOX_STYLE`).
+
 ## Key files
 - `analysis/run_analysis.py` — the whole pipeline (load → mask → forest → overlay →
   aggregate → validate → write). Single entry point.
 - `analysis/site_context.py` — curated site context + validation AOIs (edit freely).
 - `results/*.geojson` + `summary.json` + `validation.json` — outputs; `summary.json`
   has a `layers` manifest describing each file.
+- `app/` — Next.js dashboard. `components/Explorer.tsx` (state + composition),
+  `MapView.tsx` (mapbox-gl), `Sidebar.tsx`, `StatsBar.tsx`, `AboutModal.tsx`;
+  `lib/schema.ts` (Zod), `lib/scoring.ts` (search/sort/filter), `lib/data.ts`.

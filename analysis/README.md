@@ -100,7 +100,29 @@ in `summary.json` always shows the breakdown so no single number hides the mix
 (e.g. RESERVE SITE dominates and is a *reserved-for-future* signal, not imminent
 clearance).
 
-## 7. Caveats
+## 7. Why OpenStreetMap, and caveats
+
+**Why OSM `natural=forest`, not official data.** There is no authoritative *vector*
+dataset of Singapore's secondary forests, which is what makes OSM the practical choice:
+
+- **Official data maps only gazetted spaces.** NParks / data.gov.sg vector layers cover
+  statutorily protected or managed areas (Central Catchment, Bukit Timah, Sungei Buloh,
+  managed parks) — not the non-gazetted secondary growth that Clementi/Dover/Tengah-type
+  patches represent.
+- **The Master Plan tracks zoning *intent*, not ground cover.** A `RESERVE SITE` polygon
+  might currently be a 50-year-old secondary forest or a flat patch of grass — URA
+  classifies both identically by future administrative intent, so official data alone is
+  blind to what actually grows inside a development zone.
+- **OSM is a vector of physical reality.** Contributors trace high-resolution satellite
+  imagery (Sentinel, Maxar) into `natural=forest` polygons — a pre-vectorized map of
+  physical canopy that aligns directly with the URA vector layer.
+- **The only authoritative alternative is raster.** ESA WorldCover (10 m), Google Dynamic
+  World and Hansen Global Forest Change are scientifically validated but ship as pixel
+  grids, needing raster→vector conversion and heavy cleanup (10 m pixels routinely
+  misclassify urban shadows, rooftops and roadside planting as "forest").
+
+So OSM is the most frictionless pre-vectorized canopy source for this vector overlay —
+used with these caveats:
 
 - OSM crowd-sourced canopy is not an authoritative land-cover survey; some mapped
   "forest" may already be cleared, and currency varies.

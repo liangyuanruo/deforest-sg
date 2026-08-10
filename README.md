@@ -22,6 +22,21 @@ Of ~**5,007 ha** of forest mapped in Singapore (OSM `natural=forest`), roughly
 `results/summary.json` for the ranked breakdown and caveats (reserve land is a
 future, not imminent, signal).
 
+## Why OpenStreetMap?
+
+There is no authoritative *vector* dataset of Singapore's secondary forests. Official
+NParks / data.gov.sg layers map only gazetted spaces (Central Catchment, Bukit Timah,
+Sungei Buloh, managed parks); the URA Master Plan encodes zoning *intent*, not what
+physically grows on the land — a `RESERVE SITE` polygon may be 50-year-old secondary
+forest or bare grass. OSM contributors trace high-resolution satellite imagery
+(Sentinel, Maxar) into `natural=forest` polygons — a pre-vectorized map of physical
+canopy that aligns directly with the URA vector layer. The only authoritative
+alternative is satellite land-cover **rasters** (ESA WorldCover, Google Dynamic World,
+Hansen Global Forest Change), which would need raster→vector conversion and heavy
+cleanup (10 m pixels misclassify shadows, rooftops and roadside planting). OSM is the
+most frictionless source for this vector overlay — used here with its crowd-sourced
+caveats stated plainly.
+
 ## Repository layout
 
 ```text
@@ -53,16 +68,22 @@ poetry run python run_analysis.py
 
 See [`analysis/README.md`](analysis/README.md) for full setup, methodology, and caveats.
 
-## How the app consumes this
+## The app
 
-`results/` contains three GeoJSON layers — each stamped with a `source` property
-(`OSM`, `URA_MP2025`, or the intersection) — plus `summary.json` (which includes a
-`layers` manifest) and `validation.json`. The app can render all three layers to show
-the OSM forest, the URA development zones, and where they overlap. **The analysis does
-not modify `app/`.**
+`app/` is an interactive **Next.js 16** dashboard (Mapbox GL + shadcn/ui) that lets
+citizens search and filter the affected sites, sort by string match blended with
+threatened area, see the hectares under threat, and read the motivation. It renders
+`results/` directly — the three GeoJSON layers (each stamped with a `source` property:
+`OSM`, `URA_MP2025`, or the intersection) plus `summary.json`. The pipeline writes
+`results/`; the app build copies it into a gitignored `app/public/data/` automatically,
+so `results/` stays the single source of truth (no committed duplication).
 
-Each output file and every property is documented in
-[`results/README.md`](results/README.md).
+```bash
+cd app && pnpm install && pnpm dev      # http://localhost:3000
+```
+
+Deployed to Vercel with **Root Directory = `app`**. Each output file and every property
+is documented in [`results/README.md`](results/README.md).
 
 | Layer | Source | Role |
 | --- | --- | --- |
