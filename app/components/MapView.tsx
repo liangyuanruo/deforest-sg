@@ -62,21 +62,22 @@ const CAMERA = {
 };
 
 /**
- * Mapbox Standard `basemap` config: a faded, label-light, flat treatment so the
+ * Mapbox Standard `basemap` config: a neutral, desaturated grey treatment (muted
+ * greens for greenspace, grey water/roads/buildings, dark labels) so the
  * threatened-forest overlay stays the focus. Applies only to the Standard vector
  * style — the Satellite option is a raster style and ignores it — and is
  * re-applied after every setStyle swap back to Standard (a swap resets config to
  * the style's defaults).
  */
 const STANDARD_BASEMAP_CONFIG = {
-  lightPreset: "dawn",
-  colorMotorways: "#ffdbf4",
-  colorTrunks: "#ffdbf4",
-  colorRoads: "#ffdbf4",
+  colorMotorways: "#e0e0e0",
+  colorTrunks: "#e6e6e6",
+  colorRoads: "#e0e0e0",
   showPedestrianRoads: false,
+  colorPlaceLabels: "#4a4a4a",
   showPointOfInterestLabels: false,
-  colorPointOfInterestLabels: "#fffcf5",
-  showRoadLabels: false,
+  colorPointOfInterestLabels: "#e0e0e0",
+  colorRoadLabels: "#4a4a4a",
   showTransitLabels: false,
   showAdminBoundaries: false,
   show3dObjects: false,
@@ -85,15 +86,14 @@ const STANDARD_BASEMAP_CONFIG = {
   show3dLandmarks: false,
   showLandmarkIconLabels: false,
   showIndoorLabels: false,
-  theme: "faded",
-  colorBuildings: "#fffcf5",
-  colorCommercial: "#fffcf5",
-  colorEducation: "#fffcf5",
-  colorMedical: "#fffcf5",
-  colorIndustrial: "#fffcf5",
-  colorGreenspace: "#96df90",
-  colorWater: "#29b8ff",
-  colorLand: "#fffcf5",
+  colorBuildings: "#f0f0f0",
+  colorCommercial: "#f0f0f0",
+  colorEducation: "#f0f0f0",
+  colorMedical: "#f0f0f0",
+  colorIndustrial: "#f0f0f0",
+  colorGreenspace: "#b3d5be",
+  colorWater: "#cfcfcf",
+  colorLand: "#f0f0f0",
 };
 
 const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
