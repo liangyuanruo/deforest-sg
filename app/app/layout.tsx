@@ -13,12 +13,30 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://deforest-sg.vercel.app";
+const TITLE = "Deforest SG — Singapore forest & land-use explorer";
+const DESCRIPTION =
+  "See which Singapore forests the URA Master Plan 2025 zones for development — an OpenStreetMap × MP2025 land-use overlay.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   applicationName: "Deforest SG",
-  title: "Deforest SG — Singapore forest & land-use explorer",
-  description:
-    "An independent overlay comparing crowd-sourced OpenStreetMap forest cover with the URA Master Plan 2025 land-use layer for Singapore — search sites and explore where the two intersect.",
+  title: TITLE,
+  description: DESCRIPTION,
   appleWebApp: { capable: true, title: "Deforest SG", statusBarStyle: "default" },
+  openGraph: {
+    type: "website",
+    siteName: "Deforest SG",
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    locale: "en_SG",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
