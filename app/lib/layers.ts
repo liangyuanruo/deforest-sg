@@ -41,7 +41,7 @@ export const MAP_LAYERS: MapLayerMeta[] = [
     key: "forest",
     label: "All mapped forest",
     swatch: "#16a34a",
-    description: "Tree cover traced from satellite imagery",
+    description: "Tree cover traced from satellite imagery, from OpenStreetMap",
     role: "source",
     shortLabel: "mapped forest",
   },

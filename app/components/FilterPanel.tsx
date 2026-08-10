@@ -163,6 +163,9 @@ function FilterBody({
             dataset, it's the overlap of the two source layers below. */}
         <LayerFormula />
 
+        <p className="px-1 pt-1 text-xs font-medium text-muted-foreground">
+          Computed layer
+        </p>
         <ul className="flex flex-col gap-1">
           {resultLayers.map((layer) => (
             <LayerRow
