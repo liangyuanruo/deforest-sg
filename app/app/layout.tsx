@@ -14,9 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Deforest SG",
   title: "Deforest SG — Singapore forest & land-use explorer",
   description:
     "An independent overlay comparing crowd-sourced OpenStreetMap forest cover with the URA Master Plan 2025 land-use layer for Singapore — search sites and explore where the two intersect.",
+  appleWebApp: { capable: true, title: "Deforest SG", statusBarStyle: "default" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

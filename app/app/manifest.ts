@@ -1,0 +1,26 @@
+import type { MetadataRoute } from "next";
+
+/**
+ * Web app manifest — reuses the top-bar identity (the TreePine mark + the
+ * "Deforest SG" name) so an installed/added-to-home-screen instance matches the
+ * app chrome. The tree icon is `public/icon.svg` (the same glyph as the header),
+ * declared both `any` and `maskable` so Android crops it cleanly; `favicon.ico`
+ * stays as the legacy raster fallback.
+ */
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Deforest SG",
+    short_name: "Deforest SG",
+    description:
+      "Which Singapore forests does the URA Master Plan 2025 plan to develop? An OpenStreetMap × MP2025 land-use overlay.",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#16a34a",
+    icons: [
+      { src: "/favicon.ico", sizes: "any", type: "image/x-icon" },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+    ],
+  };
+}
