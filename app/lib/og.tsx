@@ -54,7 +54,7 @@ export function renderOgImage() {
             display: "flex",
           }}
         >
-          Which forests will Singapore develop?
+          Which forests will Singapore lose?
         </div>
       </div>
     ),
