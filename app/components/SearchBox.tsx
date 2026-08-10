@@ -106,7 +106,7 @@ export function SearchBox({
           onFocus={() => {
             if (query.trim() !== "") setOpen(true);
           }}
-          placeholder="Search a forest, area or locality…"
+          placeholder="Search for a vulnerable forest"
           aria-label="Search threatened forest sites"
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />

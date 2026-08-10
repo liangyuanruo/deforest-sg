@@ -293,9 +293,9 @@ export function MapView(props: MapViewProps) {
   const selectedRef = useRef<number | null>(null);
 
   // Basemap is a map-only concern (no other component reads it), so it lives here
-  // rather than being lifted like colorMode. Defaults to the satellite style the
+  // rather than being lifted like colorMode. Defaults to the Standard style the
   // map first mounts with.
-  const [basemap, setBasemap] = useState<Basemap>("satellite");
+  const [basemap, setBasemap] = useState<Basemap>("standard");
 
   // Mirror latest props so the async `load` handler and event handlers read fresh
   // values. useRef seeds `current` with the initial props; this effect keeps it in
@@ -316,11 +316,12 @@ export function MapView(props: MapViewProps) {
     const frameBounds =
       collectionBounds(asFeatureCollection(propsRef.current.forest)) ?? SG_BOUNDS;
 
-    // Mount default is the satellite basemap; later switches go through the
-    // basemap effect below (setStyle + re-install layers).
+    // Mount default is the Standard basemap; later switches go through the
+    // basemap effect below (setStyle + re-install layers). Must match the initial
+    // `basemap` state so the effect doesn't immediately re-swap on first load.
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: BASEMAP_STYLES.satellite,
+      style: BASEMAP_STYLES.standard,
       bounds: frameBounds,
       fitBoundsOptions: { padding: FRAME_PADDING },
     });
@@ -537,12 +538,12 @@ export function MapView(props: MapViewProps) {
   return (
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
-      <div className="absolute bottom-9 left-3 z-10 flex flex-col items-start gap-2">
-        <MapLegend
-          layers={props.layers}
-          colorMode={props.colorMode}
-          landUseSlices={landUseSlices}
-        />
+
+      {/* Toggles: a single row near the top-right, kept clear of the zoom
+          controls that sit in the corner (sm:right-16 leaves a gap). On phones
+          there's no room for a row between the top-left stats panel and the zoom
+          control, so they drop into the right gutter below the zoom as a stack. */}
+      <div className="absolute top-20 right-3 z-10 flex flex-col items-end gap-2 sm:top-3 sm:right-16 sm:flex-row sm:items-start">
         <SegmentedControl
           label="Colour by"
           ariaLabel="Colour threatened forest by"
@@ -556,6 +557,15 @@ export function MapView(props: MapViewProps) {
           options={BASEMAP_OPTIONS}
           value={basemap}
           onChange={setBasemap}
+        />
+      </div>
+
+      {/* Legend: bottom-left, on its own. */}
+      <div className="absolute bottom-9 left-3 z-10">
+        <MapLegend
+          layers={props.layers}
+          colorMode={props.colorMode}
+          landUseSlices={landUseSlices}
         />
       </div>
     </div>

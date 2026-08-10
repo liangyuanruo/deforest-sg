@@ -164,7 +164,7 @@ export function Explorer() {
         </div>
 
         <div className="flex min-w-0 flex-1 items-center sm:flex-none">
-          <div className="min-w-0 flex-1 sm:w-96 sm:flex-none">
+          <div className="min-w-0 flex-1 sm:w-[34rem] sm:flex-none">
             {ready ? (
               <SearchBox
                 sites={landUseFilteredSites}
