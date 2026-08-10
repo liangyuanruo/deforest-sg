@@ -287,14 +287,23 @@ export function MapView(props: MapViewProps) {
         hoveredRef.current = id;
         map.setFeatureState({ source: SRC.threatened, id }, { hover: true });
 
-        const pr = feature.properties as { label?: string; area_ha?: number } | null;
+        const pr = feature.properties as {
+          label?: string;
+          area_ha?: number;
+          dominant_lu_desc?: string;
+        } | null;
         const label = escapeHtml(pr?.label ?? "Forest patch");
         const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
+        const lu = pr?.dominant_lu_desc;
+        const luRow = lu
+          ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
+          : "";
         popup
           .setLngLat(e.lngLat)
           .setHTML(
             `<div class="deforest-popup__body"><div class="deforest-popup__title">${label}</div>` +
               (area ? `<div class="deforest-popup__meta">${area} under threat</div>` : "") +
+              luRow +
               `</div>`,
           )
           .addTo(map);
