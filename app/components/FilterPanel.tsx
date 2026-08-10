@@ -158,32 +158,112 @@ function FilterBody({
 
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">Map layers</h3>
+
+        {/* The derivation, stated up front: threatened forest isn't a separate
+            dataset, it's the overlap of the two source layers below. */}
+        <LayerFormula />
+
         <ul className="flex flex-col gap-1">
-          {MAP_LAYERS.map(({ key, label, swatch, description }) => (
-            <li key={key}>
-              <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-1 py-1.5 select-none hover:bg-muted">
-                <input
-                  type="checkbox"
-                  checked={layers[key]}
-                  onChange={() => onToggleLayer(key)}
-                  className="size-4 accent-foreground"
-                />
-                <span
-                  aria-hidden
-                  className="inline-block size-3 shrink-0 rounded-sm"
-                  style={{ backgroundColor: swatch }}
-                />
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-sm text-foreground">{label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {description}
-                  </span>
-                </span>
-              </label>
-            </li>
+          {resultLayers.map((layer) => (
+            <LayerRow
+              key={layer.key}
+              layer={layer}
+              checked={layers[layer.key]}
+              onToggle={() => onToggleLayer(layer.key)}
+            />
+          ))}
+        </ul>
+
+        <p className="px-1 pt-1 text-xs font-medium text-muted-foreground">
+          Source layers
+        </p>
+        <ul className="flex flex-col gap-1">
+          {sourceLayers.map((layer) => (
+            <LayerRow
+              key={layer.key}
+              layer={layer}
+              checked={layers[layer.key]}
+              onToggle={() => onToggleLayer(layer.key)}
+            />
           ))}
         </ul>
       </section>
     </>
+  );
+}
+
+const resultLayers = MAP_LAYERS.filter((l) => l.role === "result");
+const sourceLayers = MAP_LAYERS.filter((l) => l.role === "source");
+
+/** A colour chip matching a layer's map swatch; `ring` keeps pale fills visible. */
+function LayerDot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-3 shrink-0 rounded-sm ring-1 ring-border"
+      style={{ backgroundColor: color }}
+    />
+  );
+}
+
+/**
+ * Reads "mapped forest ∩ development zones = threatened forest" using the layers'
+ * own swatches, so the picture of how the result is computed can't drift from the
+ * toggles beneath it. Purely explanatory (not interactive); the symbols are hidden
+ * from assistive tech in favour of a plain-language label on the row.
+ */
+function LayerFormula() {
+  const [a, b] = sourceLayers;
+  const [result] = resultLayers;
+  return (
+    <div
+      role="note"
+      aria-label={`${result.label} is where ${a.shortLabel} and ${b.shortLabel} overlap`}
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md bg-muted/60 px-2.5 py-2 text-xs text-muted-foreground"
+    >
+      <LayerDot color={a.swatch} />
+      <span>{a.shortLabel}</span>
+      <span aria-hidden className="px-0.5 text-muted-foreground/70">
+        ∩
+      </span>
+      <LayerDot color={b.swatch} />
+      <span>{b.shortLabel}</span>
+      <span aria-hidden className="px-0.5 text-muted-foreground/70">
+        =
+      </span>
+      <LayerDot color={result.swatch} />
+      <span className="font-medium text-foreground">{result.shortLabel}</span>
+    </div>
+  );
+}
+
+/** One toggle row: checkbox + swatch + label/description. */
+function LayerRow({
+  layer,
+  checked,
+  onToggle,
+}: {
+  layer: (typeof MAP_LAYERS)[number];
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <li>
+      <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-1 py-1.5 select-none hover:bg-muted">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className="size-4 accent-foreground"
+        />
+        <LayerDot color={layer.swatch} />
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm text-foreground">{layer.label}</span>
+          <span className="text-xs text-muted-foreground">
+            {layer.description}
+          </span>
+        </span>
+      </label>
+    </li>
   );
 }
