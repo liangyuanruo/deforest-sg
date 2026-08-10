@@ -99,11 +99,8 @@ const STANDARD_BASEMAP_CONFIG = {
 const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
 const LYR = {
   forestFill: "forest-fill",
-  forestLine: "forest-line",
   zonesFill: "zones-fill",
-  zonesLine: "zones-line",
   threatFill: "threatened-fill",
-  threatLine: "threatened-line",
 } as const;
 
 const EMPTY_FC = { type: "FeatureCollection", features: [] } as const;
@@ -131,6 +128,8 @@ function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | 
 }
 
 // --- threatened-layer paint, per colour mode -----------------------------
+// Polygons are drawn as fills only (no outlines); selection/hover therefore read
+// entirely through colour and opacity below.
 // feature-state predicates reused across the expressions below.
 const SELECTED = ["boolean", ["feature-state", "selected"], false];
 const HOVER = ["boolean", ["feature-state", "hover"], false];
@@ -140,20 +139,18 @@ const HOVER = ["boolean", ["feature-state", "hover"], false];
 // so the affected area stands out against the red field.
 const STATUS_FILL_COLOR = ["case", SELECTED, "#9333ea", "#dc2626"];
 const STATUS_FILL_OPACITY = ["case", SELECTED, 0.72, HOVER, 0.62, 0.42];
-const STATUS_LINE_COLOR = ["case", SELECTED, "#6b21a8", "#991b1b"];
 
 // "landuse": each patch its own URA colour (never repainted by selection —
-// colour follows the entity). Selection reads via a darker, heavier outline and
-// a small opacity bump; the base opacity is a touch higher so the pale/white
-// URA fills (ROAD, WHITE, EDUCATIONAL) still read over the basemap.
+// colour follows the entity). Selection reads via an opacity bump; the base
+// opacity is a touch higher so the pale/white URA fills (ROAD, WHITE,
+// EDUCATIONAL) still read over the basemap.
 const LANDUSE_FILL_OPACITY = ["case", SELECTED, 0.82, HOVER, 0.7, 0.6];
-const LANDUSE_LINE_COLOR = ["case", SELECTED, "#0f172a", "#334155"];
 
 // Every polygon fill only carries transparency so the Satellite basemap's imagery
 // reads through it. The Standard basemap has no imagery to preserve, so the fills
 // paint solid there — for the threatened layer, selection still reads via colour
-// (status → purple) and the heavier, darker outline. Opacity is therefore
-// basemap-dependent across all fill layers (threatened, forest wash, zones wash).
+// (status → purple). Opacity is therefore basemap-dependent across all fill
+// layers (threatened, forest wash, zones wash).
 const SOLID_FILL_OPACITY = 1;
 
 // Satellite-tuned opacities for the two context washes.
@@ -170,7 +167,7 @@ function contextFillOpacity(basemap: Basemap, satelliteOpacity: number): number 
   return basemap === "standard" ? SOLID_FILL_OPACITY : satelliteOpacity;
 }
 
-/** Push the paint for the active colour mode onto the threatened layers. */
+/** Push the paint for the active colour mode onto the threatened layer. */
 function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
   const isLandUse = mode === "landuse";
   map.setPaintProperty(
@@ -183,28 +180,16 @@ function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
     "fill-opacity",
     threatenedFillOpacity(mode, basemap) as never,
   );
-  map.setPaintProperty(
-    LYR.threatLine,
-    "line-color",
-    (isLandUse ? LANDUSE_LINE_COLOR : STATUS_LINE_COLOR) as never,
-  );
 }
 
 /**
- * Sync the URA development-zones layer to both visibility and colour mode. Kept
- * separate from applyVisibility/applyColorMode because the zones *fill* depends
- * on both: it only shows in land-use mode (each parcel painted its URA zoning
- * colour, giving the threatened patch its surrounding parcel's intended use);
- * in status mode the zones stay the plain blue dashed outline. The outline is
- * always shown when the layer is on, switching from blue (status) to a neutral
- * dark (land use) so it reads over the varied parcel fills.
+ * Sync the URA development-zones layer to visibility. Each parcel is painted its
+ * URA zoning colour (keyed on `lu_desc`), giving the threatened patch its
+ * surrounding parcel's intended use. The fill shows whenever the layer is on (in
+ * both colour modes) — with outlines removed it's the layer's only rendering.
  */
-function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility, mode: ColorMode) {
-  const isLandUse = mode === "landuse";
-  const v = (on: boolean) => (on ? "visible" : "none");
-  map.setLayoutProperty(LYR.zonesFill, "visibility", v(layers.zones && isLandUse));
-  map.setLayoutProperty(LYR.zonesLine, "visibility", v(layers.zones));
-  map.setPaintProperty(LYR.zonesLine, "line-color", isLandUse ? "#334155" : "#2563eb");
+function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility) {
+  map.setLayoutProperty(LYR.zonesFill, "visibility", layers.zones ? "visible" : "none");
 }
 
 /**
@@ -241,32 +226,15 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     },
   });
   map.addLayer({
-    id: LYR.forestLine,
-    type: "line",
-    source: SRC.forest,
-    paint: { "line-color": "#15803d", "line-opacity": 0.45, "line-width": 0.6 },
-  });
-  map.addLayer({
     id: LYR.zonesFill,
     type: "fill",
     source: SRC.zones,
     // Painted per parcel from the URA palette (keyed on `lu_desc`); shown
-    // only in land-use mode via syncZones. Sits below the threatened fill so
+    // whenever the layer is on via syncZones. Sits below the threatened fill so
     // each patch still paints on top of its surrounding parcel.
     paint: {
       "fill-color": landUseFillExpression("lu_desc") as never,
       "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
-    },
-  });
-  map.addLayer({
-    id: LYR.zonesLine,
-    type: "line",
-    source: SRC.zones,
-    paint: {
-      "line-color": "#2563eb",
-      "line-opacity": 0.7,
-      "line-width": 1,
-      "line-dasharray": [2, 1.5],
     },
   });
   map.addLayer({
@@ -278,23 +246,13 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
       "fill-opacity": STATUS_FILL_OPACITY as never,
     },
   });
-  map.addLayer({
-    id: LYR.threatLine,
-    type: "line",
-    source: SRC.threatened,
-    paint: {
-      "line-color": STATUS_LINE_COLOR as never,
-      "line-width": ["case", SELECTED, 2.5, 0.7] as never,
-    },
-  });
 
   // Apply current filter / selection / visibility / colour now that layers exist.
   const filter = threatenedFilter(p.filteredIds);
   map.setFilter(LYR.threatFill, filter);
-  map.setFilter(LYR.threatLine, filter);
   applyVisibility(map, p.layers);
   applyColorMode(map, p.colorMode, basemap);
-  syncZones(map, p.layers, p.colorMode);
+  syncZones(map, p.layers);
   if (p.selectedId !== null) {
     map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
   }
@@ -472,7 +430,6 @@ export function MapView(props: MapViewProps) {
     if (!map || !readyRef.current) return;
     const filter = threatenedFilter(props.filteredIds);
     map.setFilter(LYR.threatFill, filter);
-    map.setFilter(LYR.threatLine, filter);
   }, [props.filteredIds]);
 
   // --- selection: feature-state + flyTo ----------------------------------
@@ -508,16 +465,15 @@ export function MapView(props: MapViewProps) {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     applyVisibility(map, props.layers);
-    syncZones(map, props.layers, props.colorMode);
-  }, [props.layers, props.colorMode]);
+    syncZones(map, props.layers);
+  }, [props.layers]);
 
   // --- colour mode -------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     applyColorMode(map, props.colorMode, basemap);
-    syncZones(map, props.layers, props.colorMode);
-  }, [props.colorMode, props.layers, basemap]);
+  }, [props.colorMode, basemap]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
   // setStyle replaces the whole style, dropping every custom source/layer and
@@ -665,11 +621,8 @@ function SegmentedControl<T extends string>({
 function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
   const v = (on: boolean) => (on ? "visible" : "none");
   map.setLayoutProperty(LYR.forestFill, "visibility", v(layers.forest));
-  map.setLayoutProperty(LYR.forestLine, "visibility", v(layers.forest));
   map.setLayoutProperty(LYR.threatFill, "visibility", v(layers.threatened));
-  map.setLayoutProperty(LYR.threatLine, "visibility", v(layers.threatened));
-  // The zones layer (fill + outline) is handled by syncZones — its fill depends
-  // on colour mode as well as visibility.
+  // The zones layer is handled by syncZones.
 }
 
 /**
