@@ -128,3 +128,23 @@
     @apply font-sans;
   }
 }
+
+/* Theme-aware Mapbox hover popup (see components/MapView.tsx). */
+.deforest-popup .mapboxgl-popup-content {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+.deforest-popup .mapboxgl-popup-tip {
+  display: none;
+}
+.deforest-popup__title {
+  font-weight: 600;
+}
+.deforest-popup__meta {
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
