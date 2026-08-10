@@ -7,8 +7,9 @@ export type MapLayerKey = "forest" | "threatened" | "zones";
 export type MapLayerVisibility = Record<MapLayerKey, boolean>;
 
 /**
- * How the threatened layer is coloured: "status" (headline amber, red when
- * selected) or "landuse" (each patch its official URA MP2025 zoning colour).
+ * How the threatened layer is coloured: "status" (headline alarm red, heatwave
+ * purple when selected) or "landuse" (each patch its official URA MP2025 zoning
+ * colour).
  */
 export type ColorMode = "status" | "landuse";
 
@@ -32,7 +33,7 @@ export const MAP_LAYERS: MapLayerMeta[] = [
   {
     key: "threatened",
     label: "Threatened forest",
-    swatch: "#f59e0b",
+    swatch: "#dc2626",
     description: "Where the two source layers overlap",
     role: "result",
     shortLabel: "threatened forest",

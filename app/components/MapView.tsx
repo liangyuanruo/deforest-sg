@@ -135,10 +135,12 @@ function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | 
 const SELECTED = ["boolean", ["feature-state", "selected"], false];
 const HOVER = ["boolean", ["feature-state", "hover"], false];
 
-// "status": headline amber, red when selected (validates the overlap).
-const STATUS_FILL_COLOR = ["case", SELECTED, "#dc2626", "#f59e0b"];
+// "status": every threatened patch reads the same alarm red; the selected patch
+// jumps to a heatwave-scale purple (the extreme-danger end of a temperature ramp)
+// so the affected area stands out against the red field.
+const STATUS_FILL_COLOR = ["case", SELECTED, "#9333ea", "#dc2626"];
 const STATUS_FILL_OPACITY = ["case", SELECTED, 0.72, HOVER, 0.62, 0.42];
-const STATUS_LINE_COLOR = ["case", SELECTED, "#991b1b", "#b45309"];
+const STATUS_LINE_COLOR = ["case", SELECTED, "#6b21a8", "#991b1b"];
 
 // "landuse": each patch its own URA colour (never repainted by selection —
 // colour follows the entity). Selection reads via a darker, heavier outline and
