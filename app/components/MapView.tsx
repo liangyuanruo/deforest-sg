@@ -554,12 +554,21 @@ function MapLegend({
 
   const rows =
     colorMode === "landuse"
-      ? landUseSlices.map((slice) => ({
-          key: slice.luDesc,
-          color: colorForLandUse(slice.luDesc),
-          label: slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc,
-          ring: true,
-        }))
+      ? landUseSlices
+          .map((slice) => ({
+            key: slice.luDesc,
+            color: colorForLandUse(slice.luDesc),
+            label: slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc,
+            ring: true,
+          }))
+          // Alphabetical so a class is easy to find; the catch-all "Other uses"
+          // is always pinned to the bottom regardless of its name.
+          .sort((a, b) => {
+            const aOther = a.label === "Other uses";
+            const bOther = b.label === "Other uses";
+            if (aOther !== bOther) return aOther ? 1 : -1;
+            return a.label.localeCompare(b.label);
+          })
       : MAP_LAYERS.filter((l) => layers[l.key]).map((l) => ({
           key: l.key,
           color: l.swatch,
