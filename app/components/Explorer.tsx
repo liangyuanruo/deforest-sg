@@ -54,7 +54,7 @@ export function Explorer() {
   const [selectedLandUses, setSelectedLandUses] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [layers, setLayers] = useState<MapLayerVisibility>({
-    forest: true,
+    forest: false,
     threatened: true,
     zones: false,
   });
