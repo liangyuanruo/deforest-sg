@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = "https://deforest-sg.vercel.app";
-const TITLE = "Deforest SG — Singapore forest & land-use explorer";
+const TITLE = "Deforest SG — Singapore's forests at risk of development";
 const DESCRIPTION =
   "See which Singapore forests the URA Master Plan 2025 zones for development — an OpenStreetMap × MP2025 land-use overlay.";
 

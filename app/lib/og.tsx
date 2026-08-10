@@ -54,7 +54,7 @@ export function renderOgImage() {
             display: "flex",
           }}
         >
-          Singapore forest & land-use explorer
+          Singapore&apos;s forests at risk of development
         </div>
       </div>
     ),
