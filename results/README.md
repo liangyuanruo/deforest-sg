@@ -63,9 +63,11 @@ extract (5,007 ha of 16,291 ha). Excluded on purpose:
 - **The gazetted nature reserves** — Central Catchment (MacRitchie, Upper/Lower Peirce),
   Bukit Timah, and the Mandai forest are **absent from this OSM extract entirely**: probe
   points deep inside them hit no `natural` *or* `landuse` polygon. In OSM these are tagged
-  `leisure=nature_reserve` / `boundary=protected_area`, which this Geofabrik-style extract
-  (layers: natural, landuse, buildings, railways, points, waterways, places, roads) does
-  not ship. So the largest contiguous green mass in Singapore is not in this layer.
+  `leisure=nature_reserve` / `boundary=protected_area`, which this [BBBike `osmium2shape`
+  extract](https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip)
+  (layers: natural, landuse, buildings, railways, points, waterways, places, roads — the
+  same fixed 8-layer set as Geofabrik-style) does not ship. So the largest contiguous green
+  mass in Singapore is not in this layer.
 
 Consequence: `forest_all` is **not** "all forest/greenery in Singapore" — it is the mapped
 `natural=forest` patches, which skew toward *secondary-forest fragments outside the reserves*

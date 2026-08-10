@@ -55,10 +55,10 @@ tagging or the AOI in `site_context.py` before trusting the discovery output.
 
 ## 4. Inputs (read-only, from `../data/`)
 
-| File | What it is |
-| --- | --- |
-| `MasterPlan2025LandUseLayer.geojson.gz` | URA MP2025 land-use polygons (`G_MP25_LANDUSE_PL`), WGS84. Key attrs: `LU_DESC`, `GPR`, `OBJECTID`. |
-| `osm-singapore.zip` | OSM shapefiles (Geofabrik-style). We use `natural.shp` (forest polygons) and `places.shp` (locality labels). |
+| File | What it is | Source |
+| --- | --- | --- |
+| `MasterPlan2025LandUseLayer.geojson.gz` | URA MP2025 land-use polygons (`G_MP25_LANDUSE_PL`), WGS84. Key attrs: `LU_DESC`, `GPR`, `OBJECTID`. | [data.gov.sg dataset `d_a8c3546b26712e35021f3a681d0353ae`](https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view) |
+| `osm-singapore.zip` | OSM shapefiles — BBBike extract (`osmium2shape`, 8-layer schema; same fixed layer set as Geofabrik-style). We use `natural.shp` (forest polygons) and `places.shp` (locality labels). | [BBBike Singapore extract](https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip) |
 
 ## 5. Outputs (written to `../results/`)
 

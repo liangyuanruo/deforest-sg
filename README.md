@@ -31,6 +31,18 @@ results/     Pipeline outputs: web-map-ready GeoJSON + summary/validation JSON.
 app/         Separate Next.js storytelling site that renders results/. (Its own repo/docs.)
 ```
 
+## Data sources
+
+The two read-only inputs in `data/` come from:
+
+| Input | Source |
+| --- | --- |
+| `MasterPlan2025LandUseLayer.geojson.gz` | URA Master Plan 2025 Land Use Layer — [data.gov.sg dataset `d_a8c3546b26712e35021f3a681d0353ae`](https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view) |
+| `osm-singapore.zip` | OpenStreetMap Singapore — [BBBike shapefile extract](https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip) |
+
+These URLs are also recorded in `results/summary.json` (`provenance`) so outputs are
+self-documenting.
+
 ## Regenerate the results
 
 ```bash

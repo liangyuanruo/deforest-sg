@@ -41,6 +41,12 @@ Next.js app for visual storytelling.
 - Clip OSM forest to Singapore with that mask (the OSM extract bleeds into Johor).
 
 ## Data facts
+- **Source downloads** (the two raw inputs in `data/`, treated read-only):
+  - MP2025 land use → data.gov.sg dataset `d_a8c3546b26712e35021f3a681d0353ae`:
+    https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view
+  - OSM Singapore → BBBike extract (`osmium2shape`, 8-layer schema — same fixed layer set
+    as Geofabrik-style, *not* Geofabrik):
+    https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip
 - MP2025 (`data/MasterPlan2025LandUseLayer.geojson.gz`): 113,394 polygons, WGS84,
   `G_MP25_LANDUSE_PL`. Attrs used: `OBJECTID`, `LU_DESC`, `GPR`.
 - `LU_DESC` split into `DEVELOPMENT_ZONES` vs `PROTECTED_ZONES` at the top of
