@@ -14,6 +14,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   fetchDevelopmentZones,
   fetchForestAll,
   fetchSummary,
@@ -55,6 +60,7 @@ export function Explorer() {
   });
   const [colorMode, setColorMode] = useState<ColorMode>("status");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const zonesRequestedRef = useRef(false);
 
   // Load the two core layers + summary once on mount (setState runs after the
@@ -148,18 +154,16 @@ export function Explorer() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
-      {/* Three-zone header on desktop (logo | search + filter | about + github);
-          a single compact row on mobile. Two FilterPanel slots, mutually
-          exclusive by breakpoint: on desktop the button sits just right of the
-          centered search; on mobile it stays in the right-hand cluster. One is
-          always display:none. */}
+      {/* Three-zone header on desktop (logo | search | actions); a single
+          compact row on mobile. The filter trigger lives inside the search box
+          itself (SearchBox), so there's no separate filter slot in the bar. */}
       <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:gap-3 sm:px-4">
         <div className="flex shrink-0 items-center gap-2 sm:flex-1">
           <TreePine className="size-5 text-primary" />
           <h1 className="hidden text-sm font-semibold sm:block">Deforest SG</h1>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
+        <div className="flex min-w-0 flex-1 items-center sm:flex-none">
           <div className="min-w-0 flex-1 sm:w-96 sm:flex-none">
             {ready ? (
               <SearchBox
@@ -167,38 +171,49 @@ export function Explorer() {
                 query={query}
                 onQueryChange={setQuery}
                 onSelectSite={handleSelect}
+                filterActiveCount={selectedLandUses.length}
+                onOpenFilter={() => setFilterOpen(true)}
               />
             ) : (
               <Skeleton className="h-9 w-full" />
             )}
           </div>
-          {ready && (
-            <FilterPanel className="hidden sm:inline-flex" {...filterProps} />
-          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:flex-1 sm:justify-end">
-          {ready && <FilterPanel className="sm:hidden" {...filterProps} />}
           {/* Desktop: the secondary actions inline. Mobile: same actions folded
               into the hamburger (both sets are breakpoint-exclusive). */}
           <ThemeToggle className="hidden sm:inline-flex" />
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="About this project"
-            onClick={() => setAboutOpen(true)}
-            className="hidden sm:inline-flex"
-          >
-            <Info />
-            <span>About</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="About this project"
+                  onClick={() => setAboutOpen(true)}
+                  className="hidden sm:inline-flex"
+                >
+                  <Info />
+                </Button>
+              }
+            />
+            <TooltipContent>About this project</TooltipContent>
+          </Tooltip>
           <GitHubLink className="hidden sm:inline-flex" />
           <HeaderMenu className="sm:hidden" onOpenAbout={() => setAboutOpen(true)} />
         </div>
       </header>
 
-      {/* Controlled by the header actions above; also auto-opens once on a
-          visitor's first load. Renders no trigger of its own. */}
+      {/* Both controlled by the header actions above; neither renders a trigger.
+          The filter's trigger lives inside the search box (SearchBox). */}
+      {ready && (
+        <FilterPanel
+          open={filterOpen}
+          onOpenChange={setFilterOpen}
+          {...filterProps}
+        />
+      )}
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
 
       {loadError ? (

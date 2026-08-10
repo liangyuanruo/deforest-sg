@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { MapPin, Search, X } from "lucide-react";
+import { MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,6 +29,10 @@ export interface SearchBoxProps {
   onQueryChange: (q: string) => void;
   /** Fired when a suggestion is chosen — selects the site on the map. */
   onSelectSite: (id: number) => void;
+  /** Number of active land-use filters, shown as a badge on the filter button. */
+  filterActiveCount?: number;
+  /** Opens the filter & layers panel (trigger lives inside the search box). */
+  onOpenFilter?: () => void;
   className?: string;
 }
 
@@ -43,6 +47,8 @@ export function SearchBox({
   query,
   onQueryChange,
   onSelectSite,
+  filterActiveCount = 0,
+  onOpenFilter,
   className,
 }: SearchBoxProps) {
   const [open, setOpen] = useState(false);
@@ -116,6 +122,27 @@ export function SearchBox({
               className="rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" />
+            </button>
+          </InputGroupAddon>
+        )}
+        {onOpenFilter && (
+          <InputGroupAddon align="inline-end" className="gap-0">
+            <span aria-hidden className="mr-1 h-4 w-px bg-border" />
+            <button
+              type="button"
+              onClick={onOpenFilter}
+              aria-label="Filter and layers"
+              className="relative flex items-center gap-1 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <SlidersHorizontal className="size-4" />
+              {filterActiveCount > 0 && (
+                <Badge
+                  variant="default"
+                  className="h-4 min-w-4 justify-center px-1 tabular-nums"
+                >
+                  {filterActiveCount}
+                </Badge>
+              )}
             </button>
           </InputGroupAddon>
         )}
