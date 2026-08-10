@@ -10,3 +10,9 @@ analysis/.cache/
 
 # Decompressed OSM shapefiles — derived from data/osm-singapore.zip, not source (~170MB)
 data/osm-singapore/
+
+# QGIS project files (personal analysis scratch)
+*.qgz
+*.qgs
+*.qgz~
+*.qgs~
