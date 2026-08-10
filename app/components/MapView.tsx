@@ -49,11 +49,54 @@ export interface MapViewProps {
   className?: string;
 }
 
-// Singapore, roughly — used to frame the map on first load.
+// Fallback frame if the forest layer is somehow empty. Brackets Singapore's
+// actual extent (centre ≈ 1.335°N) — deliberately NOT reaching south into the
+// open sea, which would skew the island upward. The real frame is the forest
+// content bounds (see collectionBounds), so this is only a safety net.
 const SG_BOUNDS: [[number, number], [number, number]] = [
-  [103.6, 1.15],
-  [104.09, 1.48],
+  [103.6, 1.2],
+  [104.09, 1.47],
 ];
+
+/** Uniform padding (px) when framing Singapore, on every breakpoint. */
+const FRAME_PADDING = 40;
+
+/**
+ * Bounding box of a FeatureCollection as [[minLon,minLat],[maxLon,maxLat]], or
+ * null if it has no coordinates. Used to frame the map on the forest content
+ * itself (already clipped to Singapore) so the island is centred at any aspect
+ * ratio, rather than trusting a hand-picked box.
+ */
+function collectionBounds(
+  fc: GeoJSON.FeatureCollection,
+): [[number, number], [number, number]] | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const visit = (node: unknown): void => {
+    const arr = node as number[];
+    if (typeof arr[0] === "number") {
+      const [x, y] = arr;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    } else {
+      for (const part of node as unknown[]) visit(part);
+    }
+  };
+  for (const f of fc.features) {
+    if (f.geometry && "coordinates" in f.geometry) {
+      visit((f.geometry as { coordinates: unknown }).coordinates);
+    }
+  }
+  if (!Number.isFinite(minX)) return null;
+  return [
+    [minX, minY],
+    [maxX, maxY],
+  ];
+}
 
 const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
 const LYR = {
@@ -172,19 +215,40 @@ export function MapView(props: MapViewProps) {
     if (!containerRef.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    // Frame on the forest content (clipped to Singapore) so the island is
+    // centred regardless of viewport aspect ratio. MapView only mounts once the
+    // forest layer has loaded, so this is populated on first render.
+    const frameBounds =
+      collectionBounds(asFeatureCollection(propsRef.current.forest)) ?? SG_BOUNDS;
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: MAPBOX_STYLE,
-      bounds: SG_BOUNDS,
-      fitBoundsOptions: { padding: 48 },
+      bounds: frameBounds,
+      fitBoundsOptions: { padding: FRAME_PADDING },
     });
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
+    // Once the user pans/zooms, stop auto-framing so we never yank them back.
+    // Only user-initiated moves carry an originalEvent (our own fitBounds/flyTo
+    // do not), so this doesn't trip on programmatic camera changes.
+    let userInteracted = false;
+    map.on("movestart", (e) => {
+      if ((e as { originalEvent?: unknown }).originalEvent) userInteracted = true;
+    });
+
     // mapbox-gl.css forces `.mapboxgl-map { position: relative }`, and the flex/
-    // dynamic-import mount can settle the container size after init — keep the
-    // canvas in sync with the container.
-    const resizeObserver = new ResizeObserver(() => map.resize());
+    // dynamic-import mount can settle the container size *after* init — so the
+    // construction-time fit may have used stale dimensions. Keep the canvas in
+    // sync and re-frame Singapore on every resize until the user takes over (and
+    // never while a site is selected, so we don't fight its flyTo).
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+      if (!userInteracted && propsRef.current.selectedId === null) {
+        map.fitBounds(frameBounds, { padding: FRAME_PADDING, duration: 0 });
+      }
+    });
     resizeObserver.observe(containerRef.current);
 
     const popup = new mapboxgl.Popup({
