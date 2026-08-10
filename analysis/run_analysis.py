@@ -33,6 +33,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+from shapely.geometry import MultiPolygon, Polygon
 
 from site_context import context_for_name
 
@@ -105,6 +106,92 @@ def singapore_mask(mp: gpd.GeoDataFrame):
     return geom
 
 
+# --------------------------------------------------------------------------- #
+# Geometry cleaning — OSM spike removal
+# --------------------------------------------------------------------------- #
+# A "spike" (needle) is an OSM digitizing artefact: a single vertex dragged far
+# from the polygon body so the ring runs out and straight back, leaving a long
+# zero-ish-width spur. `make_valid()` does NOT remove these (a thin triangle is
+# topologically valid), so they inflate areas and render as long lines on the map.
+# Real example fixed by this: osm_id 863261572 ("Unnamed forest near Malcolm") had
+# one vertex ~4 km south of the rest, inflating its area by ~3.3 ha.
+#
+# Thresholds are deliberately conservative so genuine geometry is never trimmed:
+# a tip is removed only when BOTH incident edges exceed SPIKE_MIN_SPUR_M *and* the
+# out-and-back detour is more than SPIKE_MAX_RATIO times the straight gap between
+# the tip's neighbours. Traced forest boundaries have vertices tens of metres apart,
+# so a >500 m spur that returns to a near point is unambiguously an error, not a
+# legitimate long boundary edge (those have their neighbours far apart -> low ratio).
+SPIKE_MIN_SPUR_M = 500.0
+SPIKE_MAX_RATIO = 8.0
+
+
+def _despike_ring(coords, min_spur_m: float, max_ratio: float):
+    """Drop single-vertex needle tips from one closed ring's coordinate sequence.
+
+    A tip is a vertex whose two incident edges are both long yet return to a near
+    point (the OSM mis-dragged-node artefact). Iterated, so a spike exposed by
+    removing an adjacent tip is stripped too. Returns the cleaned closed ring (first
+    point repeated), or ``None`` if it collapses below a triangle. Coordinates must
+    be in a metric CRS (distances are treated as metres).
+    """
+    ring = [tuple(c) for c in coords]
+    if len(ring) > 1 and ring[0] == ring[-1]:
+        ring = ring[:-1]
+    changed = True
+    while changed and len(ring) > 3:
+        changed = False
+        n = len(ring)
+        drop = [False] * n
+        for i in range(n):
+            a, v, b = ring[(i - 1) % n], ring[i], ring[(i + 1) % n]
+            spur_a, spur_b = math.dist(a, v), math.dist(v, b)
+            base = math.dist(a, b)
+            if (
+                spur_a > min_spur_m
+                and spur_b > min_spur_m
+                and (spur_a + spur_b) > max_ratio * base
+            ):
+                drop[i] = True
+                changed = True
+        if changed:
+            ring = [p for i, p in enumerate(ring) if not drop[i]]
+    if len(ring) < 3:
+        return None
+    return ring + [ring[0]]
+
+
+def despike_geometry(geom, min_spur_m: float = SPIKE_MIN_SPUR_M,
+                     max_ratio: float = SPIKE_MAX_RATIO):
+    """Remove needle spikes from a (Multi)Polygon, in its own (metric) CRS units.
+
+    Non-polygonal or empty input is returned unchanged; a polygon whose exterior
+    collapses is dropped (``None``). Interior rings that collapse are simply omitted.
+    """
+    if geom is None or geom.is_empty or geom.geom_type not in ("Polygon", "MultiPolygon"):
+        return geom
+
+    def fix_poly(poly):
+        ext = _despike_ring(poly.exterior.coords, min_spur_m, max_ratio)
+        if ext is None:
+            return None
+        holes = []
+        for interior in poly.interiors:
+            h = _despike_ring(interior.coords, min_spur_m, max_ratio)
+            if h is not None:
+                holes.append(h)
+        cleaned = Polygon(ext, holes)
+        return cleaned if cleaned.is_valid else cleaned.buffer(0)
+
+    if geom.geom_type == "Polygon":
+        return fix_poly(geom)
+    parts = [fix_poly(p) for p in geom.geoms]
+    parts = [p for p in parts if p is not None and not p.is_empty]
+    if not parts:
+        return None
+    return parts[0] if len(parts) == 1 else MultiPolygon(parts)
+
+
 def load_forest(mask) -> gpd.GeoDataFrame:
     """OSM natural='forest' (+ landuse='forest' if any), clipped to Singapore, EPSG:3414."""
     frames = []
@@ -116,6 +203,11 @@ def load_forest(mask) -> gpd.GeoDataFrame:
         frames.append(lu_forest.assign(source_layer="landuse"))
     forest = pd.concat(frames, ignore_index=True)
     forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=nat.crs).to_crs(AREA_CRS)
+    forest["geometry"] = forest.geometry.make_valid()
+    # Strip OSM digitizing spikes (needle vertices placed far from the polygon body)
+    # before they inflate areas and render as long spurs. Runs in metric EPSG:3414.
+    forest["geometry"] = forest.geometry.apply(despike_geometry)
+    forest = forest[forest.geometry.notna() & ~forest.geometry.is_empty].copy()
     forest["geometry"] = forest.geometry.make_valid()
     forest = gpd.clip(forest, mask)
     forest = forest[forest.geometry.notna() & ~forest.geometry.is_empty].copy()

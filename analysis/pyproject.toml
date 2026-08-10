@@ -12,8 +12,15 @@ dependencies = [
     "pandas>=2.2",
 ]
 
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
 [tool.poetry]
 package-mode = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
 
 [build-system]
 requires = ["poetry-core>=2.0"]
