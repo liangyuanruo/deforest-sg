@@ -54,7 +54,7 @@ export function renderOgImage() {
             display: "flex",
           }}
         >
-          Singapore&apos;s forests at risk of development
+          Singapore&apos;s vulnerable forests
         </div>
       </div>
     ),
