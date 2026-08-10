@@ -112,6 +112,12 @@ export function MapView(props: MapViewProps) {
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
+    // mapbox-gl.css forces `.mapboxgl-map { position: relative }`, and the flex/
+    // dynamic-import mount can settle the container size after init — keep the
+    // canvas in sync with the container.
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
+
     const popup = new mapboxgl.Popup({
       closeButton: false,
       closeOnClick: false,
@@ -262,6 +268,7 @@ export function MapView(props: MapViewProps) {
     });
 
     return () => {
+      resizeObserver.disconnect();
       popup.remove();
       map.remove();
       mapRef.current = null;
@@ -342,7 +349,7 @@ export function MapView(props: MapViewProps) {
 
   return (
     <div className={cn("relative h-full w-full", props.className)}>
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="h-full w-full" />
       <MapLegend layers={props.layers} onToggleLayer={props.onToggleLayer} />
     </div>
   );

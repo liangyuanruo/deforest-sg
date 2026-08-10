@@ -1,7 +1,7 @@
 "use client";
 
 import type { SVGProps } from "react";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,27 +26,6 @@ const GITHUB_REPO_URL = "https://github.com/liangyuanruo/deforest";
 const ABOUT_SEEN_KEY = "deforest_about_seen";
 
 /**
- * Whether this visitor has already seen the About dialog, read via
- * `useSyncExternalStore` rather than an effect + `setState`. `getSnapshot`
- * never throws if storage is unavailable (privacy mode, disabled storage);
- * `getServerSnapshot` reports "seen" so SSR always renders closed and the
- * client corrects itself on mount without a hydration mismatch.
- */
-function subscribeNever() {
-  return () => {};
-}
-function hasSeenAboutSnapshot(): boolean {
-  try {
-    return localStorage.getItem(ABOUT_SEEN_KEY) !== null;
-  } catch {
-    return true;
-  }
-}
-function hasSeenAboutServerSnapshot(): boolean {
-  return true;
-}
-
-/**
  * GitHub octocat mark. This lucide-react version ships no brand/logo icons
  * (no `Github` export), so the mark is inlined here instead of adding a
  * dependency. Deliberately has no `size-*` class so it picks up Button's
@@ -69,6 +48,7 @@ export function GitHubLink({ className }: { className?: string }) {
           <Button
             variant="ghost"
             size="icon"
+            nativeButton={false}
             className={cn(className)}
             render={
               <a
@@ -93,36 +73,38 @@ export function GitHubLink({ className }: { className?: string }) {
  * automatically on a visitor's first load (tracked via localStorage).
  */
 export function AboutModal({ className }: { className?: string }) {
-  const hasSeenAbout = useSyncExternalStore(
-    subscribeNever,
-    hasSeenAboutSnapshot,
-    hasSeenAboutServerSnapshot,
-  );
-  // `null` until the visitor manually opens/closes the dialog; until then,
-  // openness auto-follows `hasSeenAbout` (closed on the server and on
-  // repeat visits, open once on a first visit).
-  const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? !hasSeenAbout;
+  const [open, setOpen] = useState(false);
+  // Focused when the dialog opens so it starts at the top (otherwise base-ui
+  // focuses the first link and scrolls the title out of view).
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const handleOpenChange = useCallback((next: boolean) => {
-    setUserOpen(next);
-  }, []);
-
-  // Persist the "seen" flag once we know it's missing. This only writes to
-  // localStorage (an external system) — it never calls setState, so it's
-  // not the setState-in-effect pattern the auto-open itself must avoid.
+  // Open once on a visitor's first load. localStorage is read inside the effect
+  // (client-only, guarded), and the open is deferred to the next frame so it is
+  // not a synchronous set-state-in-effect.
   useEffect(() => {
-    if (!hasSeenAbout) {
+    let seen = true;
+    try {
+      seen = localStorage.getItem(ABOUT_SEEN_KEY) !== null;
+    } catch {
+      seen = true;
+    }
+    if (seen) return;
+    // Persist inside the rAF callback (not before) so React 19 StrictMode's
+    // double-invoke — mount, cleanup, mount — doesn't mark it seen on the first
+    // pass and then skip opening on the second.
+    const id = requestAnimationFrame(() => {
+      setOpen(true);
       try {
         localStorage.setItem(ABOUT_SEEN_KEY, "1");
       } catch {
-        // localStorage unavailable — nothing to persist, the dialog still opened once.
+        // localStorage unavailable — still opened once for this visit.
       }
-    }
-  }, [hasSeenAbout]);
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
           <Button variant="outline" size="sm" className={cn(className)}>
@@ -131,10 +113,9 @@ export function AboutModal({ className }: { className?: string }) {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-2xl">
-        <div className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+      <DialogContent className="sm:max-w-2xl" initialFocus={titleRef}>
+        <DialogHeader>
+          <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
               Which forests does the Master Plan 2025 plan to develop?
             </DialogTitle>
             <DialogDescription>
@@ -144,7 +125,7 @@ export function AboutModal({ className }: { className?: string }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-4 flex flex-col gap-4 text-sm text-foreground">
+          <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1 text-sm text-foreground">
             <section>
               <h3 className="font-semibold">What this shows</h3>
               <p className="mt-1 text-muted-foreground">
@@ -286,11 +267,11 @@ export function AboutModal({ className }: { className?: string }) {
               </ul>
             </section>
           </div>
-        </div>
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline">Close</Button>} />
           <Button
+            nativeButton={false}
             render={
               <a
                 href={GITHUB_REPO_URL}
