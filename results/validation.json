@@ -7,13 +7,6 @@
       "forest_present_ha": 21.69,
       "threatened_ha": 21.69,
       "recovered": true
-    },
-    {
-      "site": "Gillman Barracks",
-      "method": "AOI bbox [103.7965, 1.2735, 103.8085, 1.2845]",
-      "forest_present_ha": 0.76,
-      "threatened_ha": 0.76,
-      "recovered": true
     }
   ]
 }

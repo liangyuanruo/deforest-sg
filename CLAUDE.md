@@ -4,9 +4,12 @@ Read this before working in the repo so you don't re-derive what's already settl
 
 ## What this project is
 Determine **what forest/greenery the URA Master Plan 2025 (MP2025) plans to develop**
-in Singapore, name the affected areas, and **validate** the method against the two
-publicly-announced sites (Maju Forest, Gillman Barracks). Outputs feed a separate
-Next.js app for visual storytelling.
+in Singapore, name the affected areas, and **sanity-check** the method against the one
+publicly-announced site it can honestly test: **Maju Forest** (a *named* secondary
+forest recovered by OSM name). The other announced site, **Gillman Barracks**, is
+deliberately out of scope — its redevelopment is mostly the historic barracks buildings,
+not forest clearance, so a forest overlay can't claim to recover it (see the validation
+note below). Outputs feed a separate Next.js app for visual storytelling.
 
 ## Hard boundaries
 - **`app/` is the built dashboard, now folded into this repo** (Aug 2026). The earlier
@@ -69,9 +72,13 @@ Next.js app for visual storytelling.
   filter to inside the Singapore mask).
 
 ## Validation gate (must stay green)
-`results/validation.json` → `overall_pass` must be `true`. Maju Forest recovers by name
-(~21.7 ha), Gillman Barracks by AOI (~0.8 ha). If it goes false, the tagging assumption
-or an AOI in `site_context.py` is wrong — fix before trusting discovery output.
+`results/validation.json` → `overall_pass` must be `true`. It rests on a **single site**:
+Maju Forest recovers by OSM name (~21.7 ha on dev-zoned land). If it goes false, the
+tagging assumption is wrong — fix before trusting discovery output. **No AOI / bounding-box
+site matching** — an earlier "Gillman Barracks by bbox" check was removed as unprincipled
+(a lon/lat box aligns to nothing on the ground, mislabels neighbouring slivers of the same
+forest, and let the method claim a "recovery" the forest data doesn't support; Gillman is
+mostly building redevelopment, not forest).
 
 ## Run
 ```bash
@@ -92,7 +99,8 @@ is present at build). Mapbox creds ship as env-overridable in-code defaults in
 ## Key files
 - `analysis/run_analysis.py` — the whole pipeline (load → mask → forest → overlay →
   aggregate → validate → write). Single entry point.
-- `analysis/site_context.py` — curated site context + validation AOIs (edit freely).
+- `analysis/site_context.py` — curated per-name site context, keyed on OSM forest name
+  (edit freely). No AOI/bbox matching — removed (see validation gate).
 - `results/*.geojson` + `summary.json` + `validation.json` — outputs; `summary.json`
   has a `layers` manifest describing each file.
 - `app/` — Next.js dashboard. `components/Explorer.tsx` (state + composition),

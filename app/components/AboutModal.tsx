@@ -184,13 +184,22 @@ export function AboutModal({
             </section>
 
             <section>
-              <h3 className="font-semibold">Is the method trustworthy?</h3>
+              <h3 className="font-semibold">How far does this go?</h3>
               <p className="mt-1 text-muted-foreground">
-                Before trusting anything new, the analysis confirms it
-                independently recovers the two already-announced sites: Maju
-                Forest (~21.7 ha, matched by name) and Gillman Barracks
-                (~0.8 ha, matched by location). Both are recovered, so the
-                tagging approach holds.
+                The one announced site this method can honestly test is Maju
+                Forest — a named secondary forest the analysis recovers by its
+                OpenStreetMap name (~21.7 ha on development-zoned land). That is
+                a sanity check, not a proof: it shows the overlay finds a known
+                forest, nothing more.
+              </p>
+              <p className="mt-2 text-muted-foreground">
+                The other announced site, Gillman Barracks, is deliberately
+                left out. Its redevelopment is mostly about the historic
+                barracks buildings, not forest clearance, so a
+                forest-versus-zoning overlay can&rsquo;t claim to
+                &ldquo;recover&rdquo; it without conflating the two. Treat every
+                unannounced patch here as a lead to verify, not a confirmed
+                plan.
               </p>
             </section>
 

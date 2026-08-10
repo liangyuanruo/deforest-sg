@@ -33,9 +33,8 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import box
 
-from site_context import SITE_CONTEXT, AOI_SITES, context_for_name
+from site_context import context_for_name
 
 # --------------------------------------------------------------------------- #
 # Paths & config
@@ -215,27 +214,10 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     patches["wildlife"] = ctx.apply(lambda c: c.get("wildlife") if c else None)
     patches["status"] = ctx.apply(lambda c: c.get("status") if c else None)
 
-    # AOI-based enrichment. Some announced sites are known by location, not by an OSM
-    # forest name (e.g. Gillman Barracks — the surrounding forest is unnamed). Any
-    # *unnamed* patch that falls inside a known AOI bbox inherits that site's curated
-    # context and a site-specific label, so it isn't lost as an anonymous sliver.
-    aoi_geoms = {name: _aoi_geom(cfg["bbox_wgs84"]) for name, cfg in AOI_SITES.items()}
-
-    def _blank(v):  # True for None, NaN, or empty/whitespace string
-        return not (isinstance(v, str) and v.strip())
-
-    for i, patch in patches.iterrows():
-        # Only fill unnamed patches that don't already carry a name-based context.
-        if not _blank(patches.at[i, "name"]) or not _blank(patches.at[i, "context"]):
-            continue
-        for name, aoi in aoi_geoms.items():
-            if patch.geometry.intersects(aoi):
-                cfg = AOI_SITES[name]
-                patches.at[i, "context"] = cfg["context"]
-                patches.at[i, "wildlife"] = cfg.get("wildlife")
-                patches.at[i, "status"] = cfg.get("status")
-                patches.at[i, "label"] = f"{name} (forest patch)"
-                break
+    # Context comes only from a matched OSM forest *name* (above). We deliberately
+    # do NOT relabel unnamed patches by a location bounding box: a lon/lat box
+    # aligns to nothing on the ground, mislabels neighbouring slivers of the same
+    # forest, and would let us claim named sites the data doesn't actually name.
 
     # Representative point in lon/lat.
     rp = patches.to_crs(WEB_CRS).geometry.representative_point()
@@ -250,12 +232,12 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
 # --------------------------------------------------------------------------- #
 # Validation
 # --------------------------------------------------------------------------- #
-def _aoi_geom(bbox_wgs84):
-    return gpd.GeoSeries([box(*bbox_wgs84)], crs=WEB_CRS).to_crs(AREA_CRS).iloc[0]
-
-
 def validate(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame) -> dict:
-    """Confirm the two publicly-announced sites are recovered by the analysis."""
+    """Sanity-check the method against the one publicly-announced site it can
+    actually test: Maju Forest, a *named* secondary forest that the pipeline must
+    recover by its OSM name. (Gillman Barracks — the other announced site — is
+    excluded: it is mostly redevelopment of the historic barracks, not forest
+    clearance, so a forest overlay can't honestly claim to recover it.)"""
     sites = []
 
     # Maju Forest — recover by OSM name (a named forest polygon exists).
@@ -268,20 +250,6 @@ def validate(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame) -> dict:
         "threatened_ha": round(maju_threat, 2),
         "recovered": maju_threat > 1.0,
     })
-
-    # Gillman Barracks — recover by AOI (surrounding forest is unnamed).
-    for name, cfg in AOI_SITES.items():
-        aoi = _aoi_geom(cfg["bbox_wgs84"])
-        present = float(forest[forest.intersects(aoi)].geometry.intersection(aoi).area.sum() / 1e4)
-        sub = frag[frag.intersects(aoi)].copy()
-        threat = float(sub.geometry.intersection(aoi).area.sum() / 1e4) if len(sub) else 0.0
-        sites.append({
-            "site": name,
-            "method": f"AOI bbox {cfg['bbox_wgs84']}",
-            "forest_present_ha": round(present, 2),
-            "threatened_ha": round(threat, 2),
-            "recovered": threat > 0.2,
-        })
 
     overall = all(s["recovered"] for s in sites)
     return {"overall_pass": overall, "sites": sites}
@@ -420,7 +388,7 @@ def main() -> None:
         log(f"  {flag}{s['site']}: threatened {s['threatened_ha']} ha "
             f"(forest present {s['forest_present_ha']} ha)", t0)
     if not validation["overall_pass"]:
-        log("WARNING: a known site did not recover — investigate tagging/AOI before trusting output.", t0)
+        log("WARNING: Maju Forest did not recover — investigate the tagging assumption before trusting output.", t0)
 
     # --- write outputs ---
     # 1. Intersection result: the planned-deforestation footprint (OSM forest ∩ URA dev zones).

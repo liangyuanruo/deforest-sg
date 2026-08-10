@@ -79,21 +79,14 @@ SITE_CONTEXT = {
     },
 }
 
-# Sites that are known by area/location rather than a forest name (matched by AOI, not name).
-# Used for validation and for enriching unnamed patches that fall inside these areas.
-AOI_SITES = {
-    "Gillman Barracks": {
-        # Former military barracks, now an arts enclave near Alexandra / Telok Blangah.
-        "bbox_wgs84": [103.7965, 1.2735, 103.8085, 1.2845],  # minx, miny, maxx, maxy
-        "context": (
-            "Former British military barracks (1936), today a contemporary-arts enclave. "
-            "The surrounding secondary forest was named by MND alongside Maju Forest "
-            "(Aug 2026) as needed for housing over the next decade."
-        ),
-        "wildlife": "Mature roadside and secondary trees on the Alexandra/Telok Blangah ridge green network.",
-        "status": "Flagged for development within the next decade (MND, 2026).",
-    },
-}
+# NOTE: we intentionally have no location/bounding-box ("AOI") mechanism here.
+# An earlier version relabelled any unnamed forest sliver inside a lon/lat box as
+# "Gillman Barracks" for validation. That was dropped as unprincipled: the box
+# aligns to nothing on the ground, mislabels neighbouring patches of the same
+# forest, and — since Gillman Barracks is mostly redevelopment of the historic
+# barracks rather than forest clearance — let the method claim a "recovery" it
+# hadn't earned. Context now comes only from a matched OSM forest name (above),
+# and validation rests solely on Maju Forest (see run_analysis.validate()).
 
 
 def context_for_name(name):
