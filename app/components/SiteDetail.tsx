@@ -5,6 +5,7 @@ import { Layers, MapPin, Ruler, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatHa, formatPercent } from "@/lib/format";
+import { colorForLandUse } from "@/lib/landuse";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,7 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
             icon={<Layers className="size-3.5" />}
             label="Intended land use"
             value={site.dominant_lu_desc}
+            swatch={colorForLandUse(site.dominant_lu_desc)}
           />
           {site.gpr && <Row label="Plot ratio" value={site.gpr} />}
         </dl>
@@ -113,10 +115,13 @@ function Row({
   icon,
   label,
   value,
+  swatch,
 }: {
   icon?: React.ReactNode;
   label: string;
   value: string;
+  /** Optional colour dot shown before the value (e.g. the URA land-use fill). */
+  swatch?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -124,7 +129,16 @@ function Row({
         {icon}
         {label}
       </dt>
-      <dd className="truncate text-right font-medium text-foreground">{value}</dd>
+      <dd className="flex min-w-0 items-center gap-1.5 text-right font-medium text-foreground">
+        {swatch && (
+          <span
+            aria-hidden
+            className="size-2.5 shrink-0 rounded-sm ring-1 ring-border"
+            style={{ backgroundColor: swatch }}
+          />
+        )}
+        <span className="truncate">{value}</span>
+      </dd>
     </div>
   );
 }

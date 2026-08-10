@@ -17,7 +17,7 @@ import {
   fetchThreatened,
 } from "@/lib/data";
 import { filterAndSortSites, landUseOptions } from "@/lib/scoring";
-import type { MapLayerKey, MapLayerVisibility } from "@/lib/layers";
+import type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
 import type {
   DevelopmentZoneFeatureCollection,
   ForestFeatureCollection,
@@ -50,6 +50,7 @@ export function Explorer() {
     threatened: true,
     zones: false,
   });
+  const [colorMode, setColorMode] = useState<ColorMode>("status");
   const zonesRequestedRef = useRef(false);
 
   // Load the two core layers + summary once on mount (setState runs after the
@@ -197,6 +198,8 @@ export function Explorer() {
               selectedId={selectedId}
               onSelect={handleSelect}
               layers={layers}
+              colorMode={colorMode}
+              onColorModeChange={setColorMode}
             />
           ) : (
             <div className="h-full w-full animate-pulse bg-muted" />

@@ -39,7 +39,7 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
   const { threatenedHa, siteCount, fraction, slices } = useMemo(() => {
     const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
     const fraction = totalForestHa > 0 ? threatenedHa / totalForestHa : 0;
-    const slices = toColoredSlices(aggregateByLandUse(sites));
+    const slices = toColoredSlices(aggregateByLandUse(sites), 6);
     return { threatenedHa, siteCount: sites.length, fraction, slices };
   }, [sites, totalForestHa]);
 
@@ -89,7 +89,7 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
                 {slices.map((slice) => (
                   <span
                     key={slice.luDesc}
-                    className="h-full first:rounded-l-full last:rounded-r-full"
+                    className="h-full ring-1 ring-inset ring-border/70 first:rounded-l-full last:rounded-r-full"
                     style={{
                       width: `${(slice.areaHa / threatenedHa) * 100}%`,
                       backgroundColor: colorForLandUse(slice.luDesc),
@@ -106,7 +106,7 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
                   >
                     <span
                       aria-hidden
-                      className="size-2 shrink-0 rounded-full"
+                      className="size-2 shrink-0 rounded-full ring-1 ring-border"
                       style={{ backgroundColor: colorForLandUse(slice.luDesc) }}
                     />
                     <span className="min-w-0 flex-1 truncate text-foreground">

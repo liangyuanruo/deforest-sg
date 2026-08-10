@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MAPBOX_STYLE, MAPBOX_TOKEN } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
-import { MAP_LAYERS, type MapLayerVisibility } from "@/lib/layers";
+import { MAP_LAYERS, type ColorMode, type MapLayerVisibility } from "@/lib/layers";
+import {
+  aggregateByLandUse,
+  colorForLandUse,
+  landUseFillExpression,
+  OTHER_LABEL,
+  toColoredSlices,
+  type LandUseSlice,
+} from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
   DevelopmentZoneFeatureCollection,
@@ -13,7 +21,10 @@ import type {
   ThreatenedFeatureCollection,
 } from "@/lib/schema";
 
-export type { MapLayerKey, MapLayerVisibility } from "@/lib/layers";
+export type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
+
+/** How many land-use classes to name in the map legend before folding to "Other". */
+const LEGEND_MAX_CLASSES = 8;
 
 export interface MapViewProps {
   /** All mapped OSM forest (context base layer). */
@@ -30,6 +41,10 @@ export interface MapViewProps {
   onSelect: (id: number | null) => void;
   /** Which layers are visible. */
   layers: MapLayerVisibility;
+  /** How the threatened layer is coloured (status vs URA land use). */
+  colorMode: ColorMode;
+  /** Fired by the on-map "Colour by" toggle. */
+  onColorModeChange: (mode: ColorMode) => void;
   className?: string;
 }
 
@@ -70,6 +85,43 @@ function escapeHtml(value: string): string {
 function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | null {
   if (ids === null) return null;
   return ["in", ["get", "id"], ["literal", ids]] as unknown as mapboxgl.FilterSpecification;
+}
+
+// --- threatened-layer paint, per colour mode -----------------------------
+// feature-state predicates reused across the expressions below.
+const SELECTED = ["boolean", ["feature-state", "selected"], false];
+const HOVER = ["boolean", ["feature-state", "hover"], false];
+
+// "status": headline amber, red when selected (validates the overlap).
+const STATUS_FILL_COLOR = ["case", SELECTED, "#dc2626", "#f59e0b"];
+const STATUS_FILL_OPACITY = ["case", SELECTED, 0.72, HOVER, 0.62, 0.42];
+const STATUS_LINE_COLOR = ["case", SELECTED, "#991b1b", "#b45309"];
+
+// "landuse": each patch its own URA colour (never repainted by selection —
+// colour follows the entity). Selection reads via a darker, heavier outline and
+// a small opacity bump; the base opacity is a touch higher so the pale/white
+// URA fills (ROAD, WHITE, EDUCATIONAL) still read over the basemap.
+const LANDUSE_FILL_OPACITY = ["case", SELECTED, 0.82, HOVER, 0.7, 0.6];
+const LANDUSE_LINE_COLOR = ["case", SELECTED, "#0f172a", "#334155"];
+
+/** Push the paint for the active colour mode onto the threatened layers. */
+function applyColorMode(map: mapboxgl.Map, mode: ColorMode) {
+  const isLandUse = mode === "landuse";
+  map.setPaintProperty(
+    LYR.threatFill,
+    "fill-color",
+    (isLandUse ? landUseFillExpression() : STATUS_FILL_COLOR) as never,
+  );
+  map.setPaintProperty(
+    LYR.threatFill,
+    "fill-opacity",
+    (isLandUse ? LANDUSE_FILL_OPACITY : STATUS_FILL_OPACITY) as never,
+  );
+  map.setPaintProperty(
+    LYR.threatLine,
+    "line-color",
+    (isLandUse ? LANDUSE_LINE_COLOR : STATUS_LINE_COLOR) as never,
+  );
 }
 
 /**
@@ -214,6 +266,7 @@ export function MapView(props: MapViewProps) {
       map.setFilter(LYR.threatFill, filter);
       map.setFilter(LYR.threatLine, filter);
       applyVisibility(map, p.layers);
+      applyColorMode(map, p.colorMode);
       if (p.selectedId !== null) {
         map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
         selectedRef.current = p.selectedId;
@@ -345,10 +398,77 @@ export function MapView(props: MapViewProps) {
     applyVisibility(map, props.layers);
   }, [props.layers]);
 
+  // --- colour mode -------------------------------------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    applyColorMode(map, props.colorMode);
+  }, [props.colorMode]);
+
+  // Land-use legend rows: the classes present in the threatened set, top N by
+  // area then "Other". Only computed (and shown) in land-use mode.
+  const landUseSlices = useMemo<LandUseSlice[]>(() => {
+    if (props.colorMode !== "landuse" || !props.threatened) return [];
+    const agg = aggregateByLandUse(props.threatened.features.map((f) => f.properties));
+    return toColoredSlices(agg, LEGEND_MAX_CLASSES);
+  }, [props.colorMode, props.threatened]);
+
   return (
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
-      <MapLegend layers={props.layers} />
+      <div className="absolute bottom-9 left-3 z-10 flex flex-col items-start gap-2">
+        <MapLegend
+          layers={props.layers}
+          colorMode={props.colorMode}
+          landUseSlices={landUseSlices}
+        />
+        <ColorModeToggle mode={props.colorMode} onChange={props.onColorModeChange} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * On-map "Colour by" segmented control. Visible on every breakpoint (it changes
+ * the threatened layer's primary encoding); interactive, so it opts back into
+ * pointer events inside the otherwise-passive overlay cluster.
+ */
+function ColorModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ColorMode;
+  onChange: (mode: ColorMode) => void;
+}) {
+  const options: { key: ColorMode; label: string }[] = [
+    { key: "status", label: "Status" },
+    { key: "landuse", label: "Land use" },
+  ];
+  return (
+    <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/85 py-1 pr-1 pl-2 shadow-sm backdrop-blur">
+      <span className="hidden text-[11px] text-muted-foreground sm:inline">Colour by</span>
+      <div
+        role="group"
+        aria-label="Colour threatened forest by"
+        className="inline-flex rounded-md bg-muted/60 p-0.5"
+      >
+        {options.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            aria-pressed={mode === o.key}
+            onClick={() => onChange(o.key)}
+            className={cn(
+              "rounded-[5px] px-2 py-0.5 text-xs font-medium transition-colors",
+              mode === o.key
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -363,15 +483,50 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
 }
 
 /**
- * Passive legend — a read-only key for the currently visible layers. Toggling
- * lives in the filter modal now, so this only reflects state. Hidden on small
- * screens to keep the map clear; only shows layers that are actually on.
+ * Passive legend — a read-only key, hidden on small screens to keep the map
+ * clear. In "status" mode it lists the visible layers; in "landuse" mode it
+ * keys the URA land-use colours present in the threatened set. Positioning is
+ * handled by the overlay cluster in MapView.
  */
-function MapLegend({ layers }: { layers: MapLayerVisibility }) {
+function MapLegend({
+  layers,
+  colorMode,
+  landUseSlices,
+}: {
+  layers: MapLayerVisibility;
+  colorMode: ColorMode;
+  landUseSlices: LandUseSlice[];
+}) {
+  const box =
+    "pointer-events-none hidden max-w-[13rem] rounded-lg border border-border/60 bg-card/85 px-3 py-2 text-xs shadow-sm backdrop-blur md:block";
+
+  if (colorMode === "landuse") {
+    if (landUseSlices.length === 0) return null;
+    return (
+      <div className={box}>
+        <p className="mb-1.5 font-medium text-muted-foreground">Intended land use</p>
+        <ul className="space-y-1">
+          {landUseSlices.map((slice) => (
+            <li key={slice.luDesc} className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 shrink-0 rounded-sm ring-1 ring-border"
+                style={{ backgroundColor: colorForLandUse(slice.luDesc) }}
+              />
+              <span className="truncate text-foreground">
+                {slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   const visible = MAP_LAYERS.filter((l) => layers[l.key]);
   if (visible.length === 0) return null;
   return (
-    <div className="pointer-events-none absolute bottom-9 left-3 z-10 hidden rounded-lg border border-border/60 bg-card/85 px-3 py-2 text-xs shadow-sm backdrop-blur md:block">
+    <div className={box}>
       <ul className="space-y-1">
         {visible.map(({ key, label, swatch }) => (
           <li key={key} className="flex items-center gap-2">

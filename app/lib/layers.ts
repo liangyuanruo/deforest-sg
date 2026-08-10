@@ -6,6 +6,12 @@
 export type MapLayerKey = "forest" | "threatened" | "zones";
 export type MapLayerVisibility = Record<MapLayerKey, boolean>;
 
+/**
+ * How the threatened layer is coloured: "status" (headline amber, red when
+ * selected) or "landuse" (each patch its official URA MP2025 zoning colour).
+ */
+export type ColorMode = "status" | "landuse";
+
 export interface MapLayerMeta {
   key: MapLayerKey;
   label: string;
