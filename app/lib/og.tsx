@@ -54,7 +54,7 @@ export function renderOgImage() {
             display: "flex",
           }}
         >
-          Singapore&apos;s vulnerable forests
+          Which forests will Singapore develop?
         </div>
       </div>
     ),
