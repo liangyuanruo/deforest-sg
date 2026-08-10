@@ -49,54 +49,52 @@ export interface MapViewProps {
   className?: string;
 }
 
-// Fallback frame if the forest layer is somehow empty. Brackets Singapore's
-// actual extent (centre ≈ 1.335°N) — deliberately NOT reaching south into the
-// open sea, which would skew the island upward. The real frame is the forest
-// content bounds (see collectionBounds), so this is only a safety net.
-const SG_BOUNDS: [[number, number], [number, number]] = [
-  [103.6, 1.2],
-  [104.09, 1.47],
-];
-
-/** Uniform padding (px) when framing Singapore, on every breakpoint. */
-const FRAME_PADDING = 40;
+/**
+ * Fixed opening camera, shared by both basemaps (Standard and Satellite) — tuned
+ * to frame Singapore. `setStyle` preserves the camera, so switching basemap keeps
+ * this exact view; it's only set once, at mount.
+ */
+const CAMERA = {
+  center: [103.79075, 1.36602] as [number, number],
+  zoom: 11.74,
+  bearing: 0,
+  pitch: 0,
+};
 
 /**
- * Bounding box of a FeatureCollection as [[minLon,minLat],[maxLon,maxLat]], or
- * null if it has no coordinates. Used to frame the map on the forest content
- * itself (already clipped to Singapore) so the island is centred at any aspect
- * ratio, rather than trusting a hand-picked box.
+ * Mapbox Standard `basemap` config: a faded, label-light, flat treatment so the
+ * threatened-forest overlay stays the focus. Applies only to the Standard vector
+ * style — the Satellite option is a raster style and ignores it — and is
+ * re-applied after every setStyle swap back to Standard (a swap resets config to
+ * the style's defaults).
  */
-function collectionBounds(
-  fc: GeoJSON.FeatureCollection,
-): [[number, number], [number, number]] | null {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const visit = (node: unknown): void => {
-    const arr = node as number[];
-    if (typeof arr[0] === "number") {
-      const [x, y] = arr;
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    } else {
-      for (const part of node as unknown[]) visit(part);
-    }
-  };
-  for (const f of fc.features) {
-    if (f.geometry && "coordinates" in f.geometry) {
-      visit((f.geometry as { coordinates: unknown }).coordinates);
-    }
-  }
-  if (!Number.isFinite(minX)) return null;
-  return [
-    [minX, minY],
-    [maxX, maxY],
-  ];
-}
+const STANDARD_BASEMAP_CONFIG = {
+  lightPreset: "dawn",
+  colorMotorways: "#ffdbf4",
+  colorTrunks: "#ffdbf4",
+  colorRoads: "#ffdbf4",
+  showPedestrianRoads: false,
+  showPointOfInterestLabels: false,
+  colorPointOfInterestLabels: "#fffcf5",
+  showRoadLabels: false,
+  showTransitLabels: false,
+  showAdminBoundaries: false,
+  show3dObjects: false,
+  show3dBuildings: false,
+  show3dTrees: false,
+  show3dLandmarks: false,
+  showLandmarkIconLabels: false,
+  showIndoorLabels: false,
+  theme: "faded",
+  colorBuildings: "#fffcf5",
+  colorCommercial: "#fffcf5",
+  colorEducation: "#fffcf5",
+  colorMedical: "#fffcf5",
+  colorIndustrial: "#fffcf5",
+  colorGreenspace: "#96df90",
+  colorWater: "#29b8ff",
+  colorLand: "#fffcf5",
+};
 
 const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
 const LYR = {
@@ -310,42 +308,27 @@ export function MapView(props: MapViewProps) {
     if (!containerRef.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Frame on the forest content (clipped to Singapore) so the island is
-    // centred regardless of viewport aspect ratio. MapView only mounts once the
-    // forest layer has loaded, so this is populated on first render.
-    const frameBounds =
-      collectionBounds(asFeatureCollection(propsRef.current.forest)) ?? SG_BOUNDS;
-
     // Mount default is the Standard basemap; later switches go through the
-    // basemap effect below (setStyle + re-install layers). Must match the initial
-    // `basemap` state so the effect doesn't immediately re-swap on first load.
+    // basemap effect below (setStyle + re-install layers + re-apply config). Must
+    // match the initial `basemap` state so the effect doesn't immediately re-swap
+    // on first load. The Standard `basemap` config and the fixed opening camera
+    // are set here; the camera is shared with the Satellite option (setStyle keeps
+    // the camera across a basemap swap).
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLES.standard,
-      bounds: frameBounds,
-      fitBoundsOptions: { padding: FRAME_PADDING },
+      config: { basemap: STANDARD_BASEMAP_CONFIG },
+      ...CAMERA,
     });
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
-    // Once the user pans/zooms, stop auto-framing so we never yank them back.
-    // Only user-initiated moves carry an originalEvent (our own fitBounds/flyTo
-    // do not), so this doesn't trip on programmatic camera changes.
-    let userInteracted = false;
-    map.on("movestart", (e) => {
-      if ((e as { originalEvent?: unknown }).originalEvent) userInteracted = true;
-    });
-
     // mapbox-gl.css forces `.mapboxgl-map { position: relative }`, and the flex/
-    // dynamic-import mount can settle the container size *after* init — so the
-    // construction-time fit may have used stale dimensions. Keep the canvas in
-    // sync and re-frame Singapore on every resize until the user takes over (and
-    // never while a site is selected, so we don't fight its flyTo).
+    // dynamic-import mount can settle the container size *after* init. Keep the
+    // canvas in sync on resize; the camera is a fixed center/zoom, so it needs no
+    // re-framing — resize() re-renders the same view at the new container size.
     const resizeObserver = new ResizeObserver(() => {
       map.resize();
-      if (!userInteracted && propsRef.current.selectedId === null) {
-        map.fitBounds(frameBounds, { padding: FRAME_PADDING, duration: 0 });
-      }
     });
     resizeObserver.observe(containerRef.current);
 
@@ -521,6 +504,12 @@ export function MapView(props: MapViewProps) {
     map.setStyle(BASEMAP_STYLES[basemap]);
     map.once("style.load", () => {
       const p = propsRef.current;
+      // A style swap resets config to the new style's defaults, so re-apply the
+      // Standard basemap treatment. The Satellite raster style has no `basemap`
+      // import to configure, so it's skipped there.
+      if (basemap === "standard") {
+        map.setConfig("basemap", STANDARD_BASEMAP_CONFIG);
+      }
       addSourcesAndLayers(map, p);
       selectedRef.current = p.selectedId;
       readyRef.current = true;
@@ -539,17 +528,20 @@ export function MapView(props: MapViewProps) {
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* Toggles: a single row near the top-right, kept clear of the zoom
-          controls that sit in the corner (sm:right-16 leaves a gap). On phones
-          there's no room for a row between the top-left stats panel and the zoom
-          control, so they drop into the right gutter below the zoom as a stack. */}
-      <div className="absolute top-20 right-3 z-10 flex flex-col items-end gap-2 sm:top-3 sm:right-16 sm:flex-row sm:items-start">
+      {/* Toggles: a single row near the top-right on desktop, kept clear of the
+          zoom controls that sit in the corner (sm:right-16 leaves a gap). On
+          phones the row sits at the bottom-right (the legend is hidden there, so
+          nothing to clear) — raised to bottom-14 to sit above Mapbox's corner
+          attribution button. The two toggles share a compact fixed width equally
+          (flex-1) so they read as a matched pair. */}
+      <div className="absolute right-3 bottom-14 z-10 flex w-[19rem] max-w-[calc(100vw-1.5rem)] items-stretch gap-2 sm:top-3 sm:right-16 sm:bottom-auto sm:w-auto sm:max-w-none sm:items-start">
         <SegmentedControl
           label="Colour by"
           ariaLabel="Colour threatened forest by"
           options={COLOR_MODE_OPTIONS}
           value={props.colorMode}
           onChange={props.onColorModeChange}
+          className="flex-1 sm:flex-none"
         />
         <SegmentedControl
           label="Basemap"
@@ -557,11 +549,15 @@ export function MapView(props: MapViewProps) {
           options={BASEMAP_OPTIONS}
           value={basemap}
           onChange={setBasemap}
+          className="flex-1 sm:flex-none"
         />
       </div>
 
-      {/* Legend: bottom-left, on its own. */}
-      <div className="absolute bottom-9 left-3 z-10">
+      {/* Legend: bottom-left, desktop only. On phones it's hidden — the
+          collapsible "forest under threat" card (top-left) carries the same
+          land-use key, so the map key would be redundant there and its footprint
+          is better given to the toggle row. */}
+      <div className="absolute bottom-9 left-3 z-10 hidden sm:block">
         <MapLegend
           layers={props.layers}
           colorMode={props.colorMode}
@@ -594,20 +590,27 @@ function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  className,
 }: {
   label: string;
   ariaLabel: string;
   options: { key: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  className?: string;
 }) {
   return (
-    <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/85 py-1 pr-1 pl-2 shadow-sm backdrop-blur">
+    <div
+      className={cn(
+        "pointer-events-auto flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/85 py-1 pr-1 pl-2 shadow-sm backdrop-blur",
+        className,
+      )}
+    >
       <span className="hidden text-[11px] text-muted-foreground sm:inline">{label}</span>
       <div
         role="group"
         aria-label={ariaLabel}
-        className="inline-flex rounded-md bg-muted/60 p-0.5"
+        className="flex w-full rounded-md bg-muted/60 p-0.5 sm:inline-flex sm:w-auto"
       >
         {options.map((o) => (
           <button
@@ -616,7 +619,7 @@ function SegmentedControl<T extends string>({
             aria-pressed={value === o.key}
             onClick={() => onChange(o.key)}
             className={cn(
-              "rounded-[5px] px-2 py-0.5 text-xs font-medium transition-colors",
+              "flex-1 rounded-[5px] px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none",
               value === o.key
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
