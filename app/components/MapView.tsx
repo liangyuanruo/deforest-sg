@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { ChevronDown, Layers } from "lucide-react";
 import { MAPBOX_STYLE, MAPBOX_TOKEN } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
 import { MAP_LAYERS, type ColorMode, type MapLayerVisibility } from "@/lib/layers";
@@ -492,10 +493,12 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
 }
 
 /**
- * Passive legend — a read-only key, hidden on small screens to keep the map
- * clear. In "status" mode it lists the visible layers; in "landuse" mode it
- * keys the URA land-use colours present in the threatened set. Positioning is
- * handled by the overlay cluster in MapView.
+ * Passive legend / map key. In "status" mode it lists the visible layers; in
+ * "landuse" mode it keys the URA land-use colours present in the threatened set.
+ *
+ * Always open on desktop. On phones it collapses to a tappable header so the key
+ * is reachable without a tall overlay permanently covering the map (collapsed by
+ * default). Positioning is handled by the overlay cluster in MapView.
  */
 function MapLegend({
   layers,
@@ -506,48 +509,81 @@ function MapLegend({
   colorMode: ColorMode;
   landUseSlices: LandUseSlice[];
 }) {
-  const box =
-    "pointer-events-none hidden max-w-[13rem] rounded-lg border border-border/60 bg-card/85 px-3 py-2 text-xs shadow-sm backdrop-blur md:block";
+  // Collapsed by default on small screens; the md:* classes force the body open
+  // on desktop regardless. MapView is client-only, so reading the viewport in
+  // the lazy initializer is safe and correct from first paint.
+  const [expanded, setExpanded] = useState(
+    () =>
+      typeof window === "undefined" ||
+      window.matchMedia("(min-width: 768px)").matches,
+  );
 
-  if (colorMode === "landuse") {
-    if (landUseSlices.length === 0) return null;
-    return (
-      <div className={box}>
-        <p className="mb-1.5 font-medium text-muted-foreground">Intended land use</p>
+  const rows =
+    colorMode === "landuse"
+      ? landUseSlices.map((slice) => ({
+          key: slice.luDesc,
+          color: colorForLandUse(slice.luDesc),
+          label: slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc,
+          ring: true,
+        }))
+      : MAP_LAYERS.filter((l) => layers[l.key]).map((l) => ({
+          key: l.key,
+          color: l.swatch,
+          label: l.label,
+          ring: false,
+        }));
+
+  if (rows.length === 0) return null;
+
+  const title = colorMode === "landuse" ? "Intended land use" : "Map key";
+
+  return (
+    <div className="pointer-events-none max-w-[13rem] overflow-hidden rounded-lg border border-border/60 bg-card/85 text-xs shadow-sm backdrop-blur">
+      {/* Mobile-only collapse toggle (hidden on desktop, where the key is always open). */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="pointer-events-auto flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/40 md:hidden"
+      >
+        <Layers className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="font-medium text-muted-foreground">{title}</span>
+        <ChevronDown
+          className={cn(
+            "ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform",
+            expanded && "rotate-180",
+          )}
+        />
+      </button>
+
+      <div
+        className={cn(
+          "px-3 pb-2",
+          expanded ? "block border-t border-border/60 pt-2" : "hidden",
+          "md:block md:border-t-0 md:pt-2",
+        )}
+      >
+        {colorMode === "landuse" && (
+          <p className="mb-1.5 hidden font-medium text-muted-foreground md:block">
+            Intended land use
+          </p>
+        )}
         <ul className="space-y-1">
-          {landUseSlices.map((slice) => (
-            <li key={slice.luDesc} className="flex items-center gap-2">
+          {rows.map((row) => (
+            <li key={row.key} className="flex items-center gap-2">
               <span
                 aria-hidden
-                className="inline-block size-2.5 shrink-0 rounded-sm ring-1 ring-border"
-                style={{ backgroundColor: colorForLandUse(slice.luDesc) }}
+                className={cn(
+                  "inline-block size-2.5 shrink-0 rounded-sm",
+                  row.ring && "ring-1 ring-border",
+                )}
+                style={{ backgroundColor: row.color }}
               />
-              <span className="truncate text-foreground">
-                {slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc}
-              </span>
+              <span className="truncate text-foreground">{row.label}</span>
             </li>
           ))}
         </ul>
       </div>
-    );
-  }
-
-  const visible = MAP_LAYERS.filter((l) => layers[l.key]);
-  if (visible.length === 0) return null;
-  return (
-    <div className={box}>
-      <ul className="space-y-1">
-        {visible.map(({ key, label, swatch }) => (
-          <li key={key} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block size-2.5 shrink-0 rounded-sm"
-              style={{ backgroundColor: swatch }}
-            />
-            <span className="text-foreground">{label}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
