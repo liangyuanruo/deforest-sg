@@ -149,8 +149,29 @@ const STATUS_LINE_COLOR = ["case", SELECTED, "#6b21a8", "#991b1b"];
 const LANDUSE_FILL_OPACITY = ["case", SELECTED, 0.82, HOVER, 0.7, 0.6];
 const LANDUSE_LINE_COLOR = ["case", SELECTED, "#0f172a", "#334155"];
 
+// Every polygon fill only carries transparency so the Satellite basemap's imagery
+// reads through it. The Standard basemap has no imagery to preserve, so the fills
+// paint solid there — for the threatened layer, selection still reads via colour
+// (status → purple) and the heavier, darker outline. Opacity is therefore
+// basemap-dependent across all fill layers (threatened, forest wash, zones wash).
+const SOLID_FILL_OPACITY = 1;
+
+// Satellite-tuned opacities for the two context washes.
+const FOREST_FILL_OPACITY = 0.14;
+const ZONES_FILL_OPACITY = 0.28;
+
+function threatenedFillOpacity(mode: ColorMode, basemap: Basemap): unknown {
+  if (basemap === "standard") return SOLID_FILL_OPACITY;
+  return mode === "landuse" ? LANDUSE_FILL_OPACITY : STATUS_FILL_OPACITY;
+}
+
+/** Solid on Standard, the given satellite-tuned opacity on Satellite. */
+function contextFillOpacity(basemap: Basemap, satelliteOpacity: number): number {
+  return basemap === "standard" ? SOLID_FILL_OPACITY : satelliteOpacity;
+}
+
 /** Push the paint for the active colour mode onto the threatened layers. */
-function applyColorMode(map: mapboxgl.Map, mode: ColorMode) {
+function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
   const isLandUse = mode === "landuse";
   map.setPaintProperty(
     LYR.threatFill,
@@ -160,7 +181,7 @@ function applyColorMode(map: mapboxgl.Map, mode: ColorMode) {
   map.setPaintProperty(
     LYR.threatFill,
     "fill-opacity",
-    (isLandUse ? LANDUSE_FILL_OPACITY : STATUS_FILL_OPACITY) as never,
+    threatenedFillOpacity(mode, basemap) as never,
   );
   map.setPaintProperty(
     LYR.threatLine,
@@ -193,7 +214,7 @@ function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility, mode: ColorMod
  * custom sources and layers). Interaction handlers are *not* attached here — they
  * live on the map object and survive a style swap, so they're bound once.
  */
-function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps) {
+function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basemap) {
   map.addSource(SRC.forest, {
     type: "geojson",
     data: asFeatureCollection(p.forest),
@@ -214,7 +235,10 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps) {
     id: LYR.forestFill,
     type: "fill",
     source: SRC.forest,
-    paint: { "fill-color": "#16a34a", "fill-opacity": 0.14 },
+    paint: {
+      "fill-color": "#16a34a",
+      "fill-opacity": contextFillOpacity(basemap, FOREST_FILL_OPACITY),
+    },
   });
   map.addLayer({
     id: LYR.forestLine,
@@ -231,7 +255,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps) {
     // each patch still paints on top of its surrounding parcel.
     paint: {
       "fill-color": landUseFillExpression("lu_desc") as never,
-      "fill-opacity": 0.28,
+      "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
     },
   });
   map.addLayer({
@@ -269,7 +293,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps) {
   map.setFilter(LYR.threatFill, filter);
   map.setFilter(LYR.threatLine, filter);
   applyVisibility(map, p.layers);
-  applyColorMode(map, p.colorMode);
+  applyColorMode(map, p.colorMode, basemap);
   syncZones(map, p.layers, p.colorMode);
   if (p.selectedId !== null) {
     map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
@@ -344,7 +368,10 @@ export function MapView(props: MapViewProps) {
 
     map.on("load", () => {
       const p = propsRef.current;
-      addSourcesAndLayers(map, p);
+      // Mount always starts on the Standard style (set above), so install with
+      // the Standard fill opacities; later basemap swaps re-install via the
+      // basemap effect with the then-current basemap.
+      addSourcesAndLayers(map, p, "standard");
       selectedRef.current = p.selectedId;
       readyRef.current = true;
 
@@ -488,9 +515,9 @@ export function MapView(props: MapViewProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    applyColorMode(map, props.colorMode);
+    applyColorMode(map, props.colorMode, basemap);
     syncZones(map, props.layers, props.colorMode);
-  }, [props.colorMode, props.layers]);
+  }, [props.colorMode, props.layers, basemap]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
   // setStyle replaces the whole style, dropping every custom source/layer and
@@ -512,7 +539,7 @@ export function MapView(props: MapViewProps) {
       if (basemap === "standard") {
         map.setConfig("basemap", STANDARD_BASEMAP_CONFIG);
       }
-      addSourcesAndLayers(map, p);
+      addSourcesAndLayers(map, p, basemap);
       selectedRef.current = p.selectedId;
       readyRef.current = true;
     });
