@@ -107,9 +107,14 @@ export function AboutModal({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className={cn(className)}>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="About this project"
+            className={cn(className)}
+          >
             <Info />
-            About
+            <span className="hidden sm:inline">About</span>
           </Button>
         }
       />

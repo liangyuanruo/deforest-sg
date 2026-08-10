@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MAPBOX_STYLE, MAPBOX_TOKEN } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
+import { MAP_LAYERS, type MapLayerVisibility } from "@/lib/layers";
 import { cn } from "@/lib/utils";
 import type {
   DevelopmentZoneFeatureCollection,
@@ -12,8 +13,7 @@ import type {
   ThreatenedFeatureCollection,
 } from "@/lib/schema";
 
-export type MapLayerKey = "forest" | "threatened" | "zones";
-export type MapLayerVisibility = Record<MapLayerKey, boolean>;
+export type { MapLayerKey, MapLayerVisibility } from "@/lib/layers";
 
 export interface MapViewProps {
   /** All mapped OSM forest (context base layer). */
@@ -30,8 +30,6 @@ export interface MapViewProps {
   onSelect: (id: number | null) => void;
   /** Which layers are visible. */
   layers: MapLayerVisibility;
-  /** Toggle a layer's visibility. */
-  onToggleLayer: (layer: MapLayerKey) => void;
   className?: string;
 }
 
@@ -350,7 +348,7 @@ export function MapView(props: MapViewProps) {
   return (
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
-      <MapLegend layers={props.layers} onToggleLayer={props.onToggleLayer} />
+      <MapLegend layers={props.layers} />
     </div>
   );
 }
@@ -364,41 +362,25 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
   map.setLayoutProperty(LYR.zonesLine, "visibility", v(layers.zones));
 }
 
-const LEGEND: { key: MapLayerKey; label: string; swatch: string }[] = [
-  { key: "threatened", label: "Threatened forest", swatch: "#f59e0b" },
-  { key: "forest", label: "All mapped forest", swatch: "#16a34a" },
-  { key: "zones", label: "Development zones", swatch: "#2563eb" },
-];
-
-function MapLegend({
-  layers,
-  onToggleLayer,
-}: {
-  layers: MapLayerVisibility;
-  onToggleLayer: (layer: MapLayerKey) => void;
-}) {
+/**
+ * Passive legend — a read-only key for the currently visible layers. Toggling
+ * lives in the filter modal now, so this only reflects state. Hidden on small
+ * screens to keep the map clear; only shows layers that are actually on.
+ */
+function MapLegend({ layers }: { layers: MapLayerVisibility }) {
+  const visible = MAP_LAYERS.filter((l) => layers[l.key]);
+  if (visible.length === 0) return null;
   return (
-    <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-border/60 bg-card/85 p-3 text-xs shadow-sm backdrop-blur">
-      <div className="mb-1.5 font-medium text-muted-foreground">Layers</div>
-      <ul className="space-y-1.5">
-        {LEGEND.map(({ key, label, swatch }) => (
-          <li key={key}>
-            <label className="flex cursor-pointer items-center gap-2 select-none">
-              <input
-                type="checkbox"
-                checked={layers[key]}
-                onChange={() => onToggleLayer(key)}
-                className="accent-foreground"
-              />
-              <span
-                aria-hidden
-                className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ backgroundColor: swatch }}
-              />
-              <span className={layers[key] ? "text-foreground" : "text-muted-foreground"}>
-                {label}
-              </span>
-            </label>
+    <div className="pointer-events-none absolute bottom-9 left-3 z-10 hidden rounded-lg border border-border/60 bg-card/85 px-3 py-2 text-xs shadow-sm backdrop-blur md:block">
+      <ul className="space-y-1">
+        {visible.map(({ key, label, swatch }) => (
+          <li key={key} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block size-2.5 shrink-0 rounded-sm"
+              style={{ backgroundColor: swatch }}
+            />
+            <span className="text-foreground">{label}</span>
           </li>
         ))}
       </ul>

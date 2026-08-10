@@ -2,13 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Menu, TreePine } from "lucide-react";
+import { TreePine } from "lucide-react";
 
 import { AboutModal, GitHubLink } from "@/components/AboutModal";
-import { LandUseBar, StatsBar } from "@/components/StatsBar";
-import { Sidebar } from "@/components/Sidebar";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { FilterPanel } from "@/components/FilterPanel";
+import { SearchBox } from "@/components/SearchBox";
+import { SiteDetail } from "@/components/SiteDetail";
+import { StatsPanel } from "@/components/StatsPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchDevelopmentZones,
@@ -16,7 +16,8 @@ import {
   fetchSummary,
   fetchThreatened,
 } from "@/lib/data";
-import { filterAndSortSites, landUseOptions, type SortMode } from "@/lib/scoring";
+import { filterAndSortSites, landUseOptions } from "@/lib/scoring";
+import type { MapLayerKey, MapLayerVisibility } from "@/lib/layers";
 import type {
   DevelopmentZoneFeatureCollection,
   ForestFeatureCollection,
@@ -24,7 +25,6 @@ import type {
   ThreatenedFeatureCollection,
   ThreatenedProperties,
 } from "@/lib/schema";
-import type { MapLayerKey, MapLayerVisibility } from "@/components/MapView";
 
 // The map uses WebGL / window, so it must never render on the server.
 const MapView = dynamic(
@@ -43,7 +43,6 @@ export function Explorer() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [sortMode, setSortMode] = useState<SortMode>("relevance");
   const [selectedLandUses, setSelectedLandUses] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [layers, setLayers] = useState<MapLayerVisibility>({
@@ -51,7 +50,6 @@ export function Explorer() {
     threatened: true,
     zones: false,
   });
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const zonesRequestedRef = useRef(false);
 
   // Load the two core layers + summary once on mount (setState runs after the
@@ -85,16 +83,30 @@ export function Explorer() {
     [threatened],
   );
   const options = useMemo(() => landUseOptions(sites), [sites]);
-  const filteredSites = useMemo(
-    () => filterAndSortSites(sites, { query, sortMode, landUses: selectedLandUses }),
-    [sites, query, sortMode, selectedLandUses],
+
+  // The land-use filter drives what the map shows and what the stats count.
+  // Search is autocomplete (it selects a single site), so it does NOT narrow
+  // this set — the map stays whole while you look something up.
+  const landUseFilteredSites = useMemo(
+    () =>
+      filterAndSortSites(sites, {
+        query: "",
+        sortMode: "area",
+        landUses: selectedLandUses,
+      }),
+    [sites, selectedLandUses],
   );
-  const isFiltering = query.trim() !== "" || selectedLandUses.length > 0;
+  const isFiltering = selectedLandUses.length > 0;
   const filteredIds = useMemo(
-    () => (isFiltering ? filteredSites.map((s) => s.id) : null),
-    [isFiltering, filteredSites],
+    () => (isFiltering ? landUseFilteredSites.map((s) => s.id) : null),
+    [isFiltering, landUseFilteredSites],
   );
   const totalForestHa = summary?.totals.total_forest_ha_sg ?? 0;
+
+  const selectedSite = useMemo(
+    () => sites.find((s) => s.id === selectedId) ?? null,
+    [sites, selectedId],
+  );
 
   const handleToggleLandUse = useCallback((luDesc: string) => {
     setSelectedLandUses((prev) =>
@@ -103,10 +115,7 @@ export function Explorer() {
   }, []);
   const handleClearLandUses = useCallback(() => setSelectedLandUses([]), []);
 
-  const handleSelect = useCallback((id: number | null) => {
-    setSelectedId(id);
-    if (id !== null) setMobileSidebarOpen(false);
-  }, []);
+  const handleSelect = useCallback((id: number | null) => setSelectedId(id), []);
 
   const handleToggleLayer = useCallback((layer: MapLayerKey) => {
     setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
@@ -121,45 +130,50 @@ export function Explorer() {
     }
   }, []);
 
-  const sidebarProps = {
-    sites: filteredSites,
-    totalCount: sites.length,
-    query,
-    onQueryChange: setQuery,
-    sortMode,
-    onSortModeChange: setSortMode,
+  const ready = threatened !== null && forest !== null && summary !== null;
+
+  const filterProps = {
     landUseOptions: options,
     selectedLandUses,
     onToggleLandUse: handleToggleLandUse,
     onClearLandUses: handleClearLandUses,
-    selectedId,
-    onSelect: handleSelect,
+    layers,
+    onToggleLayer: handleToggleLayer,
   };
 
-  const ready = threatened !== null && forest !== null && summary !== null;
-
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setMobileSidebarOpen(true)}
-          aria-label="Open the site list"
-        >
-          <Menu />
-        </Button>
-        <div className="flex items-center gap-2">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
+      {/* Three-zone header on desktop (logo | search + filter | about + github);
+          a single compact row on mobile. Two FilterPanel slots, mutually
+          exclusive by breakpoint: on desktop the button sits just right of the
+          centered search; on mobile it stays in the right-hand cluster. One is
+          always display:none. */}
+      <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:gap-3 sm:px-4">
+        <div className="flex shrink-0 items-center gap-2 sm:flex-1">
           <TreePine className="size-5 text-primary" />
-          <div className="leading-tight">
-            <h1 className="text-sm font-semibold">Deforest SG</h1>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              Forest under the Master Plan 2025
-            </p>
-          </div>
+          <h1 className="hidden text-sm font-semibold sm:block">Deforest SG</h1>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
+
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
+          <div className="min-w-0 flex-1 sm:w-96 sm:flex-none">
+            {ready ? (
+              <SearchBox
+                sites={landUseFilteredSites}
+                query={query}
+                onQueryChange={setQuery}
+                onSelectSite={handleSelect}
+              />
+            ) : (
+              <Skeleton className="h-9 w-full" />
+            )}
+          </div>
+          {ready && (
+            <FilterPanel className="hidden sm:inline-flex" {...filterProps} />
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5 sm:flex-1 sm:justify-end">
+          {ready && <FilterPanel className="sm:hidden" {...filterProps} />}
           <AboutModal />
           <GitHubLink />
         </div>
@@ -173,61 +187,40 @@ export function Explorer() {
           </div>
         </div>
       ) : (
-        <>
-          <div className="border-b border-border p-3">
-            {ready ? (
-              <StatsBar sites={filteredSites} totalForestHa={totalForestHa} />
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[76px]" />
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="relative flex-1 overflow-hidden">
+          {ready ? (
+            <MapView
+              forest={forest}
+              threatened={threatened}
+              developmentZones={zones}
+              filteredIds={filteredIds}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              layers={layers}
+            />
+          ) : (
+            <div className="h-full w-full animate-pulse bg-muted" />
+          )}
 
-          <div className="flex flex-1 overflow-hidden">
-            {ready && (
-              <Sidebar
-                {...sidebarProps}
-                className="hidden w-80 shrink-0 md:flex"
-              />
-            )}
-
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="relative flex-1">
-                {ready ? (
-                  <MapView
-                    forest={forest}
-                    threatened={threatened}
-                    developmentZones={zones}
-                    filteredIds={filteredIds}
-                    selectedId={selectedId}
-                    onSelect={handleSelect}
-                    layers={layers}
-                    onToggleLayer={handleToggleLayer}
-                  />
-                ) : (
-                  <div className="h-full w-full animate-pulse bg-muted" />
-                )}
-              </div>
-              {ready && (
-                <div className="hidden border-t border-border p-3 sm:block">
-                  <LandUseBar sites={filteredSites} />
-                </div>
+          {/* Floating top-left panel: site detail when one is selected, else
+              the compact stats overlay. Only one is ever visible. */}
+          {ready && (
+            <div className="absolute top-3 left-3 z-10">
+              {selectedSite ? (
+                <SiteDetail
+                  site={selectedSite}
+                  onClose={() => handleSelect(null)}
+                />
+              ) : (
+                <StatsPanel
+                  sites={landUseFilteredSites}
+                  totalForestHa={totalForestHa}
+                />
               )}
             </div>
-          </div>
-        </>
+          )}
+        </div>
       )}
-
-      {/* Mobile: the sidebar lives in a slide-out drawer. */}
-      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-        <SheetContent side="left" className="w-[85vw] max-w-sm p-0">
-          <SheetTitle className="sr-only">Threatened forest sites</SheetTitle>
-          {ready && <Sidebar {...sidebarProps} className="h-full border-r-0" />}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

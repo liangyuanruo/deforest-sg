@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Deforest SG — Forest under Master Plan 2025",
+  title: "Deforest SG — Singapore forest & land-use explorer",
   description:
-    "Explore the Singapore forest that the URA Master Plan 2025 zones for development: search and filter affected sites, and see the hectares under threat.",
+    "An independent overlay comparing crowd-sourced OpenStreetMap forest cover with the URA Master Plan 2025 land-use layer for Singapore — search sites and explore where the two intersect.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
