@@ -59,17 +59,21 @@ export function colorForLandUse(luDesc: string): string {
 }
 
 /**
- * A Mapbox `match` expression mapping `dominant_lu_desc` → URA fill, with
+ * A Mapbox `match` expression mapping a land-use property → URA fill, with
  * `OTHER_COLOR` as the fallback. Built from `LAND_USE_COLOR` so the map fill and
  * the JS palette can never drift. Returned as a plain array (no mapbox-gl types)
  * to keep this module React/WebGL-free.
+ *
+ * `prop` is the feature property to read the class from — `dominant_lu_desc` for
+ * the threatened forest layer, `lu_desc` for the raw URA development zones — so
+ * both layers colour from the one palette.
  */
-export function landUseFillExpression(): unknown[] {
+export function landUseFillExpression(prop = "dominant_lu_desc"): unknown[] {
   const cases: string[] = [];
   for (const [luDesc, color] of Object.entries(LAND_USE_COLOR)) {
     cases.push(luDesc, color);
   }
-  return ["match", ["get", "dominant_lu_desc"], ...cases, OTHER_COLOR];
+  return ["match", ["get", prop], ...cases, OTHER_COLOR];
 }
 
 export interface LandUseSlice {

@@ -59,6 +59,7 @@ const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as co
 const LYR = {
   forestFill: "forest-fill",
   forestLine: "forest-line",
+  zonesFill: "zones-fill",
   zonesLine: "zones-line",
   threatFill: "threatened-fill",
   threatLine: "threatened-line",
@@ -123,6 +124,23 @@ function applyColorMode(map: mapboxgl.Map, mode: ColorMode) {
     "line-color",
     (isLandUse ? LANDUSE_LINE_COLOR : STATUS_LINE_COLOR) as never,
   );
+}
+
+/**
+ * Sync the URA development-zones layer to both visibility and colour mode. Kept
+ * separate from applyVisibility/applyColorMode because the zones *fill* depends
+ * on both: it only shows in land-use mode (each parcel painted its URA zoning
+ * colour, giving the threatened patch its surrounding parcel's intended use);
+ * in status mode the zones stay the plain blue dashed outline. The outline is
+ * always shown when the layer is on, switching from blue (status) to a neutral
+ * dark (land use) so it reads over the varied parcel fills.
+ */
+function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility, mode: ColorMode) {
+  const isLandUse = mode === "landuse";
+  const v = (on: boolean) => (on ? "visible" : "none");
+  map.setLayoutProperty(LYR.zonesFill, "visibility", v(layers.zones && isLandUse));
+  map.setLayoutProperty(LYR.zonesLine, "visibility", v(layers.zones));
+  map.setPaintProperty(LYR.zonesLine, "line-color", isLandUse ? "#334155" : "#2563eb");
 }
 
 /**
@@ -209,6 +227,18 @@ export function MapView(props: MapViewProps) {
         paint: { "line-color": "#15803d", "line-opacity": 0.45, "line-width": 0.6 },
       });
       map.addLayer({
+        id: LYR.zonesFill,
+        type: "fill",
+        source: SRC.zones,
+        // Painted per parcel from the URA palette (keyed on `lu_desc`); shown
+        // only in land-use mode via syncZones. Sits below the threatened fill so
+        // each patch still paints on top of its surrounding parcel.
+        paint: {
+          "fill-color": landUseFillExpression("lu_desc") as never,
+          "fill-opacity": 0.28,
+        },
+      });
+      map.addLayer({
         id: LYR.zonesLine,
         type: "line",
         source: SRC.zones,
@@ -268,6 +298,7 @@ export function MapView(props: MapViewProps) {
       map.setFilter(LYR.threatLine, filter);
       applyVisibility(map, p.layers);
       applyColorMode(map, p.colorMode);
+      syncZones(map, p.layers, p.colorMode);
       if (p.selectedId !== null) {
         map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
         selectedRef.current = p.selectedId;
@@ -406,14 +437,16 @@ export function MapView(props: MapViewProps) {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     applyVisibility(map, props.layers);
-  }, [props.layers]);
+    syncZones(map, props.layers, props.colorMode);
+  }, [props.layers, props.colorMode]);
 
   // --- colour mode -------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     applyColorMode(map, props.colorMode);
-  }, [props.colorMode]);
+    syncZones(map, props.layers, props.colorMode);
+  }, [props.colorMode, props.layers]);
 
   // Land-use legend rows: the classes present in the threatened set, top N by
   // area then "Other". Only computed (and shown) in land-use mode.
@@ -489,7 +522,8 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
   map.setLayoutProperty(LYR.forestLine, "visibility", v(layers.forest));
   map.setLayoutProperty(LYR.threatFill, "visibility", v(layers.threatened));
   map.setLayoutProperty(LYR.threatLine, "visibility", v(layers.threatened));
-  map.setLayoutProperty(LYR.zonesLine, "visibility", v(layers.zones));
+  // The zones layer (fill + outline) is handled by syncZones — its fill depends
+  // on colour mode as well as visibility.
 }
 
 /**
