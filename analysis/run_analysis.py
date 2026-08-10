@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import math
 import shutil
 import time
 from datetime import datetime, timezone
@@ -362,6 +363,26 @@ def build_summary(patches: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     }
 
 
+def _json_safe(obj):
+    """Recursively replace non-finite floats (NaN/Inf) with None.
+
+    pandas/numpy leave NaN in optional fields (e.g. unnamed sites' context/wildlife/
+    status). A bare ``NaN`` token is not valid JSON and breaks strict consumers such as
+    browsers' ``JSON.parse`` (the web app fetches these files), so emit ``null`` instead.
+    """
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
+def write_json(obj, path: Path) -> None:
+    path.write_text(json.dumps(_json_safe(obj), indent=2))
+
+
 def write_geojson(gdf: gpd.GeoDataFrame, path: Path) -> None:
     gdf.to_crs(WEB_CRS).to_file(path, driver="GeoJSON")
 
@@ -437,8 +458,8 @@ def main() -> None:
          "geometry": "Polygon", "role": "URA development polygons overlapping forest (context)",
          "features": int(len(zones_out))},
     ]
-    (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2))
-    (RESULTS / "validation.json").write_text(json.dumps(validation, indent=2))
+    write_json(summary, RESULTS / "summary.json")
+    write_json(validation, RESULTS / "validation.json")
 
     log(f"Wrote results/ (threatened_forests.geojson, forest_all.geojson, "
         f"development_zones.geojson, summary.json, validation.json)", t0)
