@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { ChevronDown, Layers } from "lucide-react";
-import { MAPBOX_STYLE, MAPBOX_TOKEN } from "@/lib/mapbox";
+import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
 import { MAP_LAYERS, type ColorMode, type MapLayerVisibility } from "@/lib/layers";
 import {
@@ -187,6 +187,96 @@ function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility, mode: ColorMod
 }
 
 /**
+ * (Re)install every source + layer and apply the current filter / visibility /
+ * colour mode / selection. Idempotent against a freshly-loaded style, so it runs
+ * both on first `load` and after each `setStyle` basemap swap (which wipes all
+ * custom sources and layers). Interaction handlers are *not* attached here — they
+ * live on the map object and survive a style swap, so they're bound once.
+ */
+function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps) {
+  map.addSource(SRC.forest, {
+    type: "geojson",
+    data: asFeatureCollection(p.forest),
+    promoteId: "id",
+  });
+  map.addSource(SRC.threatened, {
+    type: "geojson",
+    data: asFeatureCollection(p.threatened),
+    promoteId: "id",
+  });
+  map.addSource(SRC.zones, {
+    type: "geojson",
+    data: asFeatureCollection(p.developmentZones),
+    promoteId: "id",
+  });
+
+  map.addLayer({
+    id: LYR.forestFill,
+    type: "fill",
+    source: SRC.forest,
+    paint: { "fill-color": "#16a34a", "fill-opacity": 0.14 },
+  });
+  map.addLayer({
+    id: LYR.forestLine,
+    type: "line",
+    source: SRC.forest,
+    paint: { "line-color": "#15803d", "line-opacity": 0.45, "line-width": 0.6 },
+  });
+  map.addLayer({
+    id: LYR.zonesFill,
+    type: "fill",
+    source: SRC.zones,
+    // Painted per parcel from the URA palette (keyed on `lu_desc`); shown
+    // only in land-use mode via syncZones. Sits below the threatened fill so
+    // each patch still paints on top of its surrounding parcel.
+    paint: {
+      "fill-color": landUseFillExpression("lu_desc") as never,
+      "fill-opacity": 0.28,
+    },
+  });
+  map.addLayer({
+    id: LYR.zonesLine,
+    type: "line",
+    source: SRC.zones,
+    paint: {
+      "line-color": "#2563eb",
+      "line-opacity": 0.7,
+      "line-width": 1,
+      "line-dasharray": [2, 1.5],
+    },
+  });
+  map.addLayer({
+    id: LYR.threatFill,
+    type: "fill",
+    source: SRC.threatened,
+    paint: {
+      "fill-color": STATUS_FILL_COLOR as never,
+      "fill-opacity": STATUS_FILL_OPACITY as never,
+    },
+  });
+  map.addLayer({
+    id: LYR.threatLine,
+    type: "line",
+    source: SRC.threatened,
+    paint: {
+      "line-color": STATUS_LINE_COLOR as never,
+      "line-width": ["case", SELECTED, 2.5, 0.7] as never,
+    },
+  });
+
+  // Apply current filter / selection / visibility / colour now that layers exist.
+  const filter = threatenedFilter(p.filteredIds);
+  map.setFilter(LYR.threatFill, filter);
+  map.setFilter(LYR.threatLine, filter);
+  applyVisibility(map, p.layers);
+  applyColorMode(map, p.colorMode);
+  syncZones(map, p.layers, p.colorMode);
+  if (p.selectedId !== null) {
+    map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
+  }
+}
+
+/**
  * Imperative Mapbox GL map. The map object lives outside React's render cycle
  * (in refs); props are mirrored into `propsRef` so the one-time `load` handler
  * always sees the latest data, and dedicated effects push prop changes into the
@@ -201,6 +291,11 @@ export function MapView(props: MapViewProps) {
   const readyRef = useRef(false);
   const hoveredRef = useRef<number | null>(null);
   const selectedRef = useRef<number | null>(null);
+
+  // Basemap is a map-only concern (no other component reads it), so it lives here
+  // rather than being lifted like colorMode. Defaults to the satellite style the
+  // map first mounts with.
+  const [basemap, setBasemap] = useState<Basemap>("satellite");
 
   // Mirror latest props so the async `load` handler and event handlers read fresh
   // values. useRef seeds `current` with the initial props; this effect keeps it in
@@ -221,9 +316,11 @@ export function MapView(props: MapViewProps) {
     const frameBounds =
       collectionBounds(asFeatureCollection(propsRef.current.forest)) ?? SG_BOUNDS;
 
+    // Mount default is the satellite basemap; later switches go through the
+    // basemap effect below (setStyle + re-install layers).
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: MAPBOX_STYLE,
+      style: BASEMAP_STYLES.satellite,
       bounds: frameBounds,
       fitBoundsOptions: { padding: FRAME_PADDING },
     });
@@ -261,114 +358,11 @@ export function MapView(props: MapViewProps) {
 
     map.on("load", () => {
       const p = propsRef.current;
-
-      map.addSource(SRC.forest, {
-        type: "geojson",
-        data: asFeatureCollection(p.forest),
-        promoteId: "id",
-      });
-      map.addSource(SRC.threatened, {
-        type: "geojson",
-        data: asFeatureCollection(p.threatened),
-        promoteId: "id",
-      });
-      map.addSource(SRC.zones, {
-        type: "geojson",
-        data: asFeatureCollection(p.developmentZones),
-        promoteId: "id",
-      });
-
-      map.addLayer({
-        id: LYR.forestFill,
-        type: "fill",
-        source: SRC.forest,
-        paint: { "fill-color": "#16a34a", "fill-opacity": 0.14 },
-      });
-      map.addLayer({
-        id: LYR.forestLine,
-        type: "line",
-        source: SRC.forest,
-        paint: { "line-color": "#15803d", "line-opacity": 0.45, "line-width": 0.6 },
-      });
-      map.addLayer({
-        id: LYR.zonesFill,
-        type: "fill",
-        source: SRC.zones,
-        // Painted per parcel from the URA palette (keyed on `lu_desc`); shown
-        // only in land-use mode via syncZones. Sits below the threatened fill so
-        // each patch still paints on top of its surrounding parcel.
-        paint: {
-          "fill-color": landUseFillExpression("lu_desc") as never,
-          "fill-opacity": 0.28,
-        },
-      });
-      map.addLayer({
-        id: LYR.zonesLine,
-        type: "line",
-        source: SRC.zones,
-        paint: {
-          "line-color": "#2563eb",
-          "line-opacity": 0.7,
-          "line-width": 1,
-          "line-dasharray": [2, 1.5],
-        },
-      });
-      map.addLayer({
-        id: LYR.threatFill,
-        type: "fill",
-        source: SRC.threatened,
-        paint: {
-          "fill-color": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            "#dc2626",
-            "#f59e0b",
-          ],
-          "fill-opacity": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            0.72,
-            ["boolean", ["feature-state", "hover"], false],
-            0.62,
-            0.42,
-          ],
-        },
-      });
-      map.addLayer({
-        id: LYR.threatLine,
-        type: "line",
-        source: SRC.threatened,
-        paint: {
-          "line-color": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            "#991b1b",
-            "#b45309",
-          ],
-          "line-width": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            2.5,
-            0.7,
-          ],
-        },
-      });
-
+      addSourcesAndLayers(map, p);
+      selectedRef.current = p.selectedId;
       readyRef.current = true;
 
-      // Apply current filter / selection / visibility now that layers exist.
-      const filter = threatenedFilter(p.filteredIds);
-      map.setFilter(LYR.threatFill, filter);
-      map.setFilter(LYR.threatLine, filter);
-      applyVisibility(map, p.layers);
-      applyColorMode(map, p.colorMode);
-      syncZones(map, p.layers, p.colorMode);
-      if (p.selectedId !== null) {
-        map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
-        selectedRef.current = p.selectedId;
-      }
-
-      // --- interaction ---
+      // --- interaction (bound once; survives basemap style swaps) ---
       map.on("mousemove", LYR.threatFill, (e) => {
         map.getCanvas().style.cursor = "pointer";
         const feature = e.features?.[0];
@@ -512,6 +506,26 @@ export function MapView(props: MapViewProps) {
     syncZones(map, props.layers, props.colorMode);
   }, [props.colorMode, props.layers]);
 
+  // --- basemap: swap the base style, then re-install our layers -----------
+  // setStyle replaces the whole style, dropping every custom source/layer and
+  // all feature-state. The camera is preserved, so the user keeps their view; we
+  // just rebuild our overlay on the new basemap once it loads. Skipped until the
+  // first `load` (readyRef) so it never fires against the mount style.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    readyRef.current = false;
+    hoveredRef.current = null;
+    popupRef.current?.remove();
+    map.setStyle(BASEMAP_STYLES[basemap]);
+    map.once("style.load", () => {
+      const p = propsRef.current;
+      addSourcesAndLayers(map, p);
+      selectedRef.current = p.selectedId;
+      readyRef.current = true;
+    });
+  }, [basemap]);
+
   // Land-use legend rows: the classes present in the threatened set, top N by
   // area then "Other". Only computed (and shown) in land-use mode.
   const landUseSlices = useMemo<LandUseSlice[]>(() => {
@@ -529,45 +543,71 @@ export function MapView(props: MapViewProps) {
           colorMode={props.colorMode}
           landUseSlices={landUseSlices}
         />
-        <ColorModeToggle mode={props.colorMode} onChange={props.onColorModeChange} />
+        <SegmentedControl
+          label="Colour by"
+          ariaLabel="Colour threatened forest by"
+          options={COLOR_MODE_OPTIONS}
+          value={props.colorMode}
+          onChange={props.onColorModeChange}
+        />
+        <SegmentedControl
+          label="Basemap"
+          ariaLabel="Basemap style"
+          options={BASEMAP_OPTIONS}
+          value={basemap}
+          onChange={setBasemap}
+        />
       </div>
     </div>
   );
 }
 
+const COLOR_MODE_OPTIONS: { key: ColorMode; label: string }[] = [
+  { key: "status", label: "Status" },
+  { key: "landuse", label: "Land use" },
+];
+
+const BASEMAP_OPTIONS: { key: Basemap; label: string }[] = [
+  { key: "satellite", label: "Satellite" },
+  { key: "standard", label: "Standard" },
+];
+
 /**
- * On-map "Colour by" segmented control. Visible on every breakpoint (it changes
- * the threatened layer's primary encoding); interactive, so it opts back into
- * pointer events inside the otherwise-passive overlay cluster.
+ * On-map segmented control — the "Colour by" and "Basemap" pickers in the
+ * bottom-left cluster. Visible on every breakpoint (each changes a primary map
+ * encoding); interactive, so it opts back into pointer events inside the
+ * otherwise-passive overlay cluster.
  */
-function ColorModeToggle({
-  mode,
+function SegmentedControl<T extends string>({
+  label,
+  ariaLabel,
+  options,
+  value,
   onChange,
 }: {
-  mode: ColorMode;
-  onChange: (mode: ColorMode) => void;
+  label: string;
+  ariaLabel: string;
+  options: { key: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
 }) {
-  const options: { key: ColorMode; label: string }[] = [
-    { key: "status", label: "Status" },
-    { key: "landuse", label: "Land use" },
-  ];
   return (
     <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/85 py-1 pr-1 pl-2 shadow-sm backdrop-blur">
-      <span className="hidden text-[11px] text-muted-foreground sm:inline">Colour by</span>
+      <span className="hidden text-[11px] text-muted-foreground sm:inline">{label}</span>
       <div
         role="group"
-        aria-label="Colour threatened forest by"
+        aria-label={ariaLabel}
         className="inline-flex rounded-md bg-muted/60 p-0.5"
       >
         {options.map((o) => (
           <button
             key={o.key}
             type="button"
-            aria-pressed={mode === o.key}
+            aria-pressed={value === o.key}
             onClick={() => onChange(o.key)}
             className={cn(
               "rounded-[5px] px-2 py-0.5 text-xs font-medium transition-colors",
-              mode === o.key
+              value === o.key
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
