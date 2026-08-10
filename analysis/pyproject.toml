@@ -1,0 +1,20 @@
+[project]
+name = "deforest-analysis"
+version = "0.1.0"
+description = "Spatial analysis of planned deforestation under Singapore URA Master Plan 2025"
+authors = [{ name = "deforest" }]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "geopandas>=1.0",
+    "pyogrio>=0.10",
+    "shapely>=2.0",
+    "pyproj>=3.6",
+    "pandas>=2.2",
+]
+
+[tool.poetry]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"

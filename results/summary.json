@@ -1,0 +1,1000 @@
+{
+  "generated_at": "2026-08-10T05:18:35.540585+00:00",
+  "provenance": {
+    "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg) \u2014 G_MP25_LANDUSE_PL",
+    "forest_source": "OpenStreetMap natural=forest (Geofabrik-style extract)",
+    "area_crs": "EPSG:3414 (SVY21)",
+    "export_crs": "EPSG:4326 (WGS84)"
+  },
+  "totals": {
+    "total_forest_ha_sg": 5006.7,
+    "total_threatened_ha": 2940.9,
+    "threatened_fraction_of_mapped_forest": 0.587,
+    "n_forest_polygons_sg": 831,
+    "n_threatened_patches": 624
+  },
+  "by_lu_desc": [
+    {
+      "lu_desc": "RESERVE SITE",
+      "area_ha": 1514.16,
+      "n_fragments": 173
+    },
+    {
+      "lu_desc": "RESIDENTIAL",
+      "area_ha": 514.21,
+      "n_fragments": 578
+    },
+    {
+      "lu_desc": "SPECIAL USE",
+      "area_ha": 439.56,
+      "n_fragments": 52
+    },
+    {
+      "lu_desc": "BUSINESS 2",
+      "area_ha": 167.73,
+      "n_fragments": 55
+    },
+    {
+      "lu_desc": "ROAD",
+      "area_ha": 151.32,
+      "n_fragments": 622
+    },
+    {
+      "lu_desc": "UTILITY",
+      "area_ha": 38.71,
+      "n_fragments": 40
+    },
+    {
+      "lu_desc": "EDUCATIONAL INSTITUTION",
+      "area_ha": 35.46,
+      "n_fragments": 51
+    },
+    {
+      "lu_desc": "PORT / AIRPORT",
+      "area_ha": 15.75,
+      "n_fragments": 19
+    },
+    {
+      "lu_desc": "CIVIC & COMMUNITY INSTITUTION",
+      "area_ha": 8.45,
+      "n_fragments": 31
+    },
+    {
+      "lu_desc": "TRANSPORT FACILITIES",
+      "area_ha": 7.92,
+      "n_fragments": 24
+    },
+    {
+      "lu_desc": "BUSINESS 2 - WHITE",
+      "area_ha": 7.82,
+      "n_fragments": 3
+    },
+    {
+      "lu_desc": "BUSINESS PARK",
+      "area_ha": 7.48,
+      "n_fragments": 25
+    },
+    {
+      "lu_desc": "WHITE",
+      "area_ha": 7.48,
+      "n_fragments": 13
+    },
+    {
+      "lu_desc": "HEALTH & MEDICAL CARE",
+      "area_ha": 7.06,
+      "n_fragments": 8
+    },
+    {
+      "lu_desc": "BUSINESS 1",
+      "area_ha": 5.55,
+      "n_fragments": 6
+    },
+    {
+      "lu_desc": "HOTEL",
+      "area_ha": 5.23,
+      "n_fragments": 30
+    },
+    {
+      "lu_desc": "COMMERCIAL",
+      "area_ha": 3.38,
+      "n_fragments": 10
+    },
+    {
+      "lu_desc": "RESIDENTIAL WITH COMMERCIAL AT 1ST STOREY",
+      "area_ha": 1.96,
+      "n_fragments": 7
+    },
+    {
+      "lu_desc": "BUSINESS 1 - WHITE",
+      "area_ha": 0.81,
+      "n_fragments": 1
+    },
+    {
+      "lu_desc": "COMMERCIAL & RESIDENTIAL",
+      "area_ha": 0.66,
+      "n_fragments": 3
+    },
+    {
+      "lu_desc": "RESIDENTIAL / INSTITUTION",
+      "area_ha": 0.24,
+      "n_fragments": 17
+    }
+  ],
+  "named_forests_threatened": [
+    {
+      "name": "Kampong Teban Forest",
+      "threatened_ha": 71.72
+    },
+    {
+      "name": "Toh Tuck Forest",
+      "threatened_ha": 56.26
+    },
+    {
+      "name": "Pulau Seletar",
+      "threatened_ha": 37.78
+    },
+    {
+      "name": "Lorong Halus",
+      "threatened_ha": 34.92
+    },
+    {
+      "name": "Maju Forest",
+      "threatened_ha": 21.69
+    },
+    {
+      "name": "Dover Forest West",
+      "threatened_ha": 16.2
+    },
+    {
+      "name": "Kuala Loyang (Old Tampines Road) Forest",
+      "threatened_ha": 8.02
+    },
+    {
+      "name": "Lorong Banir Forest",
+      "threatened_ha": 3.21
+    },
+    {
+      "name": "Toa Payoh Jungle",
+      "threatened_ha": 1.58
+    },
+    {
+      "name": "Pulau Jong",
+      "threatened_ha": 0.59
+    },
+    {
+      "name": "NUS Hill",
+      "threatened_ha": 0.39
+    },
+    {
+      "name": "Bukit Batok Hillside Park",
+      "threatened_ha": 0.18
+    },
+    {
+      "name": "Coastal Forest",
+      "threatened_ha": 0.18
+    },
+    {
+      "name": "East Coast Park (Zone H)",
+      "threatened_ha": 0.15
+    },
+    {
+      "name": "Hillock Park",
+      "threatened_ha": 0.0
+    },
+    {
+      "name": "Rain Forest",
+      "threatened_ha": 0.0
+    }
+  ],
+  "top_sites": [
+    {
+      "rank": 1,
+      "label": "Unnamed forest near Simpang",
+      "name": null,
+      "locality": "Simpang",
+      "area_ha": 281.59,
+      "forest_area_ha": 288.92,
+      "threatened_fraction": 0.975,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.840606,
+        1.447818
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 2,
+      "label": "Unnamed forest near Mandai East",
+      "name": null,
+      "locality": "Mandai East",
+      "area_ha": 190.41,
+      "forest_area_ha": 190.41,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.809455,
+        1.432245
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 3,
+      "label": "Unnamed forest near Tagore",
+      "name": null,
+      "locality": "Tagore",
+      "area_ha": 100.3,
+      "forest_area_ha": 100.43,
+      "threatened_fraction": 0.999,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.822991,
+        1.388922
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 4,
+      "label": "Unnamed forest near Yio Chu Kang North",
+      "name": null,
+      "locality": "Yio Chu Kang North",
+      "area_ha": 96.41,
+      "forest_area_ha": 96.42,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.849472,
+        1.393327
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 5,
+      "label": "Unnamed forest near Simpang South",
+      "name": null,
+      "locality": "Simpang South",
+      "area_ha": 96.29,
+      "forest_area_ha": 97.63,
+      "threatened_fraction": 0.986,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.856767,
+        1.432191
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 6,
+      "label": "Unnamed forest near Sanyongkong Field Camp",
+      "name": null,
+      "locality": "Sanyongkong Field Camp",
+      "area_ha": 82.72,
+      "forest_area_ha": 82.72,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.076618,
+        1.40032
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 7,
+      "label": "Kampong Teban Forest",
+      "name": "Kampong Teban Forest",
+      "locality": "Lorong Halus North",
+      "area_ha": 71.72,
+      "forest_area_ha": 74.86,
+      "threatened_fraction": 0.958,
+      "dominant_lu_desc": "BUSINESS 2",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.910522,
+        1.380778
+      ],
+      "context": "Secondary forest in the Teban / Jurong area of western Singapore.",
+      "wildlife": NaN,
+      "status": "Development-zoned."
+    },
+    {
+      "rank": 8,
+      "label": "Unnamed forest near Pulau Tekong Kechil",
+      "name": null,
+      "locality": "Pulau Tekong Kechil",
+      "area_ha": 60.55,
+      "forest_area_ha": 60.55,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.021104,
+        1.418576
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 9,
+      "label": "Unnamed forest near Yio Chu Kang North",
+      "name": null,
+      "locality": "Yio Chu Kang North",
+      "area_ha": 60.23,
+      "forest_area_ha": 74.97,
+      "threatened_fraction": 0.803,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.849175,
+        1.399455
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 10,
+      "label": "Unnamed forest near Springleaf",
+      "name": null,
+      "locality": "Springleaf",
+      "area_ha": 59.53,
+      "forest_area_ha": 60.85,
+      "threatened_fraction": 0.978,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "SDP",
+      "centroid": [
+        103.826953,
+        1.397702
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 11,
+      "label": "Toh Tuck Forest",
+      "name": "Toh Tuck Forest",
+      "locality": "Vista Garden",
+      "area_ha": 56.26,
+      "forest_area_ha": 56.42,
+      "threatened_fraction": 0.997,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "1.4, 1.7, EVA, LND",
+      "centroid": [
+        103.763252,
+        1.340217
+      ],
+      "context": "Secondary forest patch in the Toh Tuck / Bukit Batok area, on land held in reserve.",
+      "wildlife": "Secondary-forest fauna typical of the Bukit Batok green belt.",
+      "status": "Reserve/development-zoned."
+    },
+    {
+      "rank": 12,
+      "label": "Unnamed forest near Pulau Punggol Barat",
+      "name": null,
+      "locality": "Pulau Punggol Barat",
+      "area_ha": 55.19,
+      "forest_area_ha": 55.46,
+      "threatened_fraction": 0.995,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.876142,
+        1.425104
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 13,
+      "label": "Unnamed forest near Kg. Sanyongkong",
+      "name": null,
+      "locality": "Kg. Sanyongkong",
+      "area_ha": 53.81,
+      "forest_area_ha": 53.81,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.060761,
+        1.394845
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 14,
+      "label": "Unnamed forest near Changi Bay",
+      "name": null,
+      "locality": "Changi Bay",
+      "area_ha": 41.97,
+      "forest_area_ha": 42.37,
+      "threatened_fraction": 0.991,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.023321,
+        1.322989
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 15,
+      "label": "Unnamed forest near Kg. Sanyongkong Parit",
+      "name": null,
+      "locality": "Kg. Sanyongkong Parit",
+      "area_ha": 41.43,
+      "forest_area_ha": 41.43,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.068823,
+        1.399279
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 16,
+      "label": "Unnamed forest near Kg. Batu Koyok",
+      "name": null,
+      "locality": "Kg. Batu Koyok",
+      "area_ha": 38.49,
+      "forest_area_ha": 38.49,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.051529,
+        1.390948
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 17,
+      "label": "Pulau Seletar",
+      "name": "Pulau Seletar",
+      "locality": "Pulau Seletar",
+      "area_ha": 37.78,
+      "forest_area_ha": 37.78,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.861597,
+        1.443786
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 18,
+      "label": "Lorong Halus",
+      "name": "Lorong Halus",
+      "locality": "Pasir Ris Wafer Fab Park",
+      "area_ha": 34.92,
+      "forest_area_ha": 35.68,
+      "threatened_fraction": 0.979,
+      "dominant_lu_desc": "BUSINESS 2",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.927626,
+        1.395288
+      ],
+      "context": "Former landfill site at the north-eastern coast, now regenerated wetland/woodland near Lorong Halus Wetland and the Serangoon Reservoir.",
+      "wildlife": "Coastal/wetland edge habitat; birdlife associated with Serangoon Reservoir.",
+      "status": "Mixed reserve/development-zoned."
+    },
+    {
+      "rank": 19,
+      "label": "Unnamed forest near Kg. Batu Koyok",
+      "name": null,
+      "locality": "Kg. Batu Koyok",
+      "area_ha": 31.13,
+      "forest_area_ha": 31.13,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.047382,
+        1.388955
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 20,
+      "label": "Unnamed forest near Marina East (mp)",
+      "name": null,
+      "locality": "Marina East (mp)",
+      "area_ha": 29.96,
+      "forest_area_ha": 29.97,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.888571,
+        1.291456
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 21,
+      "label": "Unnamed forest near Admiralty",
+      "name": null,
+      "locality": "Admiralty",
+      "area_ha": 28.16,
+      "forest_area_ha": 28.35,
+      "threatened_fraction": 0.993,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "3.0, 3.5, SDP",
+      "centroid": [
+        103.823793,
+        1.45616
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 22,
+      "label": "Unnamed forest near Pasir Ris West",
+      "name": null,
+      "locality": "Pasir Ris West",
+      "area_ha": 27.56,
+      "forest_area_ha": 33.01,
+      "threatened_fraction": 0.835,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "1.4, 2.1, EVA",
+      "centroid": [
+        103.938091,
+        1.387082
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 23,
+      "label": "Unnamed forest near Tanah Merah",
+      "name": null,
+      "locality": "Tanah Merah",
+      "area_ha": 27.0,
+      "forest_area_ha": 27.84,
+      "threatened_fraction": 0.97,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.994254,
+        1.313418
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 24,
+      "label": "Unnamed forest near Pulau Punggol Barat",
+      "name": null,
+      "locality": "Pulau Punggol Barat",
+      "area_ha": 25.75,
+      "forest_area_ha": 25.77,
+      "threatened_fraction": 0.999,
+      "dominant_lu_desc": "UTILITY",
+      "gpr": "1.7, EVA",
+      "centroid": [
+        103.882851,
+        1.421898
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 25,
+      "label": "Unnamed forest near Mandai",
+      "name": null,
+      "locality": "Mandai",
+      "area_ha": 25.75,
+      "forest_area_ha": 25.75,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.808093,
+        1.418677
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 26,
+      "label": "Unnamed forest near Kg. Sanyongkong Parit",
+      "name": null,
+      "locality": "Kg. Sanyongkong Parit",
+      "area_ha": 25.59,
+      "forest_area_ha": 25.59,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.06506,
+        1.392582
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 27,
+      "label": "Unnamed forest near Springleaf",
+      "name": null,
+      "locality": "Springleaf",
+      "area_ha": 23.84,
+      "forest_area_ha": 26.3,
+      "threatened_fraction": 0.907,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.830682,
+        1.400653
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 28,
+      "label": "Unnamed forest near Safti",
+      "name": null,
+      "locality": "Safti",
+      "area_ha": 23.35,
+      "forest_area_ha": 23.35,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.679211,
+        1.334209
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 29,
+      "label": "Unnamed forest near Kg. Sanyongkong",
+      "name": null,
+      "locality": "Kg. Sanyongkong",
+      "area_ha": 23.09,
+      "forest_area_ha": 23.09,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.056736,
+        1.38945
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 30,
+      "label": "Unnamed forest near The Greenwood",
+      "name": null,
+      "locality": "The Greenwood",
+      "area_ha": 22.76,
+      "forest_area_ha": 23.37,
+      "threatened_fraction": 0.974,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "SDP",
+      "centroid": [
+        103.80933,
+        1.338577
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 31,
+      "label": "Unnamed forest near Seletar",
+      "name": null,
+      "locality": "Seletar",
+      "area_ha": 22.44,
+      "forest_area_ha": 25.43,
+      "threatened_fraction": 0.882,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.889241,
+        1.407846
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 32,
+      "label": "Unnamed forest near Kg. Batu Koyok",
+      "name": null,
+      "locality": "Kg. Batu Koyok",
+      "area_ha": 21.79,
+      "forest_area_ha": 21.79,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        104.053249,
+        1.385128
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 33,
+      "label": "Maju Forest",
+      "name": "Maju Forest",
+      "locality": "Sunset Way",
+      "area_ha": 21.69,
+      "forest_area_ha": 21.69,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "1.6, 2.8, EVA, LND, SDP",
+      "centroid": [
+        103.772135,
+        1.326448
+      ],
+      "context": "Secondary forest near the former Maju Camp (Clementi / Ulu Pandan area). Named by MND alongside Gillman Barracks (Aug 2026) as a site that will need to be developed to meet housing needs over the next decade.",
+      "wildlife": "Secondary-forest fauna; part of a green corridor linking Clementi/Ulu Pandan patches.",
+      "status": "Flagged for development within the next decade (MND, 2026)."
+    },
+    {
+      "rank": 34,
+      "label": "Unnamed forest near Marina East",
+      "name": null,
+      "locality": "Marina East",
+      "area_ha": 20.44,
+      "forest_area_ha": 21.32,
+      "threatened_fraction": 0.958,
+      "dominant_lu_desc": "RESERVE SITE",
+      "gpr": "EVA",
+      "centroid": [
+        103.878069,
+        1.291694
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 35,
+      "label": "Unnamed forest near Loyang West",
+      "name": null,
+      "locality": "Loyang West",
+      "area_ha": 19.91,
+      "forest_area_ha": 22.29,
+      "threatened_fraction": 0.893,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "1.4, 2.1",
+      "centroid": [
+        103.964369,
+        1.377637
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 36,
+      "label": "Unnamed forest near Changi Village",
+      "name": null,
+      "locality": "Changi Village",
+      "area_ha": 17.93,
+      "forest_area_ha": 17.93,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.986404,
+        1.381621
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 37,
+      "label": "Unnamed forest near Gali Batu",
+      "name": null,
+      "locality": "Gali Batu",
+      "area_ha": 17.02,
+      "forest_area_ha": 17.02,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.771593,
+        1.403424
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 38,
+      "label": "Unnamed forest near Changi Point",
+      "name": null,
+      "locality": "Changi Point",
+      "area_ha": 16.45,
+      "forest_area_ha": 16.45,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "SPECIAL USE",
+      "gpr": "EVA",
+      "centroid": [
+        103.981855,
+        1.380688
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 39,
+      "label": "Unnamed forest near Jalan Kayu",
+      "name": null,
+      "locality": "Jalan Kayu",
+      "area_ha": 16.32,
+      "forest_area_ha": 16.32,
+      "threatened_fraction": 1.0,
+      "dominant_lu_desc": "BUSINESS 2",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.874603,
+        1.405266
+      ],
+      "context": NaN,
+      "wildlife": NaN,
+      "status": NaN
+    },
+    {
+      "rank": 40,
+      "label": "Dover Forest West",
+      "name": "Dover Forest West",
+      "locality": "Singapore Polytechnic",
+      "area_ha": 16.2,
+      "forest_area_ha": 17.65,
+      "threatened_fraction": 0.918,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.774029,
+        1.315039
+      ],
+      "context": "Western half of Dover Forest at Ulu Pandan. After a 2021 review, Dover Forest East was released for HDB flats while the West was deferred for further study and phased development.",
+      "wildlife": "Sunda pangolin, grey-headed fish eagle and straw-headed bulbul have been recorded in the wider Dover/Ulu Pandan area.",
+      "status": "Deferred/phased after 2021 review; remains zoned for eventual development."
+    }
+  ],
+  "methodology": {
+    "summary": "Currently-standing OSM forest that MP2025 designates for development (forest polygons intersected with development-zoned land).",
+    "development_zones": [
+      "BUSINESS 1",
+      "BUSINESS 1 - WHITE",
+      "BUSINESS 2",
+      "BUSINESS 2 - WHITE",
+      "BUSINESS PARK",
+      "BUSINESS PARK - WHITE",
+      "CIVIC & COMMUNITY INSTITUTION",
+      "COMMERCIAL",
+      "COMMERCIAL & RESIDENTIAL",
+      "COMMERCIAL / INSTITUTION",
+      "EDUCATIONAL INSTITUTION",
+      "HEALTH & MEDICAL CARE",
+      "HOTEL",
+      "LIGHT RAPID TRANSIT",
+      "MASS RAPID TRANSIT",
+      "PORT / AIRPORT",
+      "RESERVE SITE",
+      "RESIDENTIAL",
+      "RESIDENTIAL / INSTITUTION",
+      "RESIDENTIAL WITH COMMERCIAL AT 1ST STOREY",
+      "ROAD",
+      "SPECIAL USE",
+      "TRANSPORT FACILITIES",
+      "UTILITY",
+      "WHITE"
+    ],
+    "protected_zones_excluded": [
+      "AGRICULTURE",
+      "BEACH AREA",
+      "CEMETERY",
+      "OPEN SPACE",
+      "PARK",
+      "PLACE OF WORSHIP",
+      "SPORTS & RECREATION",
+      "WATERBODY"
+    ],
+    "note_scope": "Planned footprint under MP2025 \u2014 NOT a measured increase vs MP2019."
+  },
+  "validation": {
+    "overall_pass": true,
+    "sites": [
+      {
+        "site": "Maju Forest",
+        "method": "name match (natural=forest, name='Maju Forest')",
+        "forest_present_ha": 21.69,
+        "threatened_ha": 21.69,
+        "recovered": true
+      },
+      {
+        "site": "Gillman Barracks",
+        "method": "AOI bbox [103.7965, 1.2735, 103.8085, 1.2845]",
+        "forest_present_ha": 0.76,
+        "threatened_ha": 0.76,
+        "recovered": true
+      }
+    ]
+  },
+  "caveats": [
+    "OSM crowd-sourced canopy is not an authoritative land-cover survey; currency varies and some mapped 'forest' may already be cleared.",
+    "Development zoning does not guarantee clearance; EIA and retained-green frameworks may spare parts of a site.",
+    "RESERVE SITE is land held for future use \u2014 a strong but not immediate development signal; SPECIAL USE may include land that stays forested (e.g. training areas). See by_lu_desc for the breakdown.",
+    "The development-zone inclusion list is an explicit, configurable judgment (see methodology.development_zones)."
+  ],
+  "layers": [
+    {
+      "file": "threatened_forests.geojson",
+      "source": "OSM_forest \u2229 URA_MP2025",
+      "geometry": "Polygon",
+      "role": "intersection result \u2014 planned deforestation footprint",
+      "features": 624
+    },
+    {
+      "file": "forest_all.geojson",
+      "source": "OSM",
+      "geometry": "Polygon",
+      "role": "all mapped OSM natural=forest inside Singapore (context base layer)",
+      "features": 831
+    },
+    {
+      "file": "development_zones.geojson",
+      "source": "URA_MP2025",
+      "geometry": "Polygon",
+      "role": "URA development polygons overlapping forest (context)",
+      "features": 1310
+    }
+  ]
+}

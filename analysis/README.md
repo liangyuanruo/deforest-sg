@@ -1,0 +1,117 @@
+# Analysis — Planned deforestation under URA Master Plan 2025
+
+This folder holds the spatial pipeline that identifies **forest that Singapore's URA
+Master Plan 2025 (MP2025) designates for development**, and validates the method
+against the two publicly-announced sites (Maju Forest, Gillman Barracks).
+
+Everything here is reproducible from the raw inputs in `../data/`. Outputs land in
+`../results/` as web-map-ready GeoJSON + JSON.
+
+---
+
+## 1. Prerequisites
+
+- [`pyenv`](https://github.com/pyenv/pyenv) with **Python 3.12.11** installed
+  (`pyenv install 3.12.11`). The version is pinned by `.python-version`.
+- [Poetry](https://python-poetry.org/) **2.x**. If you don't have it:
+  ```bash
+  "$(pyenv prefix 3.12.11)/bin/python" -m pip install poetry
+  ```
+
+No system GDAL is required — `pyogrio` ships GDAL via its wheel.
+
+## 2. Install
+
+```bash
+cd analysis
+pyenv local 3.12.11                 # already set via .python-version
+poetry env use "$(pyenv prefix 3.12.11)/bin/python"
+poetry install                      # installs from the committed poetry.lock
+```
+
+Locked dependency versions (see `poetry.lock`): geopandas 1.1.x, pyogrio 0.13.x,
+shapely 2.1.x, pyproj 3.7.x, pandas 3.0.x.
+
+## 3. Run
+
+```bash
+poetry run python run_analysis.py
+```
+
+Runtime is ~6–13 s (the Singapore mask is cached after the first run). Expected tail:
+
+```
+Forest (SG-clipped): 831 polygons, 5,007 ha
+Threatened fragments: 1,768, 2,940.9 ha
+Validation overall_pass=True
+  OK Maju Forest: threatened 21.69 ha (forest present 21.69 ha)
+  OK Gillman Barracks: threatened 0.76 ha (forest present 0.76 ha)
+```
+
+If `overall_pass` is **False**, a known site failed to recover — investigate the OSM
+tagging or the AOI in `site_context.py` before trusting the discovery output.
+
+---
+
+## 4. Inputs (read-only, from `../data/`)
+
+| File | What it is |
+| --- | --- |
+| `MasterPlan2025LandUseLayer.geojson.gz` | URA MP2025 land-use polygons (`G_MP25_LANDUSE_PL`), WGS84. Key attrs: `LU_DESC`, `GPR`, `OBJECTID`. |
+| `osm-singapore.zip` | OSM shapefiles (Geofabrik-style). We use `natural.shp` (forest polygons) and `places.shp` (locality labels). |
+
+## 5. Outputs (written to `../results/`)
+
+All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21, metres)**.
+
+| File | Source | Role |
+| --- | --- | --- |
+| `threatened_forests.geojson` | `OSM_forest ∩ URA_MP2025` | **Headline result** — forest on development-zoned land, one feature per forest polygon, with name/locality, area, dominant land use, plot ratio, and curated context. |
+| `forest_all.geojson` | `OSM` | All mapped Singapore forest (threatened or not) — context base layer. |
+| `development_zones.geojson` | `URA_MP2025` | The MP2025 development polygons that overlap forest — the masterplan side, for context. |
+| `summary.json` | — | Totals, per-`LU_DESC` breakdown, ranked top sites, named forests, methodology, validation, caveats, and a `layers` manifest. |
+| `validation.json` | — | Maju Forest & Gillman Barracks recovery report + `overall_pass`. |
+
+## 6. Methodology (what the pipeline does)
+
+1. **Load MP2025** → EPSG:3414, fix invalid geometry.
+2. **Singapore mask** = union of all MP2025 polygons (cached to `.cache/`). The OSM
+   extract bleeds into Johor, Malaysia; this mask clips forest to Singapore so totals
+   are honest.
+3. **Forest source** = OSM `natural='forest'` (defensively unioned with
+   `landuse='forest'`, which is **empty** in this extract — confirming `natural` holds
+   all the forest data), clipped to Singapore. 831 polygons, ~5,007 ha.
+4. **Overlay** forest × MP2025 **development** zones (see `DEVELOPMENT_ZONES` in
+   `run_analysis.py`), keeping each fragment's `LU_DESC` and `GPR`.
+5. **Aggregate** fragments to one record per forest polygon; label by OSM `name`, else
+   nearest OSM locality; attach curated context from `site_context.py`.
+6. **Validate** against Maju Forest (by name) and Gillman Barracks (by AOI).
+
+**Compute note:** cost is bounded by the small forest set (≈831 polygons), not the
+113k-feature masterplan. We never run a national polygon difference; the only union is
+the one-time cached Singapore mask.
+
+### Development vs protected zones
+The `DEVELOPMENT_ZONES` / `PROTECTED_ZONES` split (top of `run_analysis.py`) is an
+explicit, auditable judgment — edit those sets to change the definition. `by_lu_desc`
+in `summary.json` always shows the breakdown so no single number hides the mix
+(e.g. RESERVE SITE dominates and is a *reserved-for-future* signal, not imminent
+clearance).
+
+## 7. Caveats
+
+- OSM crowd-sourced canopy is not an authoritative land-cover survey; some mapped
+  "forest" may already be cleared, and currency varies.
+- Development zoning ≠ guaranteed clearance; EIA and retained-green frameworks may
+  spare parts of a site.
+- This is the **planned footprint under MP2025**, *not* a measured increase vs MP2019.
+
+## 8. Files in this folder
+
+```
+pyproject.toml / poetry.lock  Locked environment
+.python-version               pyenv pin (3.12.11)
+run_analysis.py               The pipeline (single entry point)
+site_context.py               Curated, human-maintained site context + validation AOIs
+.cache/                       Decompressed inputs + Singapore mask (gitignored, regenerated)
+```
