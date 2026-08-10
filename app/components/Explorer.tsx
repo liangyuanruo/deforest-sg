@@ -2,13 +2,16 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TreePine } from "lucide-react";
+import { Info, TreePine } from "lucide-react";
 
 import { AboutModal, GitHubLink } from "@/components/AboutModal";
 import { FilterPanel } from "@/components/FilterPanel";
+import { HeaderMenu } from "@/components/HeaderMenu";
 import { SearchBox } from "@/components/SearchBox";
 import { SiteDetail } from "@/components/SiteDetail";
 import { StatsPanel } from "@/components/StatsPanel";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchDevelopmentZones,
@@ -51,6 +54,7 @@ export function Explorer() {
     zones: false,
   });
   const [colorMode, setColorMode] = useState<ColorMode>("status");
+  const [aboutOpen, setAboutOpen] = useState(false);
   const zonesRequestedRef = useRef(false);
 
   // Load the two core layers + summary once on mount (setState runs after the
@@ -175,10 +179,27 @@ export function Explorer() {
 
         <div className="flex shrink-0 items-center gap-1.5 sm:flex-1 sm:justify-end">
           {ready && <FilterPanel className="sm:hidden" {...filterProps} />}
-          <AboutModal />
-          <GitHubLink />
+          {/* Desktop: the secondary actions inline. Mobile: same actions folded
+              into the hamburger (both sets are breakpoint-exclusive). */}
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="About this project"
+            onClick={() => setAboutOpen(true)}
+            className="hidden sm:inline-flex"
+          >
+            <Info />
+            <span>About</span>
+          </Button>
+          <GitHubLink className="hidden sm:inline-flex" />
+          <HeaderMenu className="sm:hidden" onOpenAbout={() => setAboutOpen(true)} />
         </div>
       </header>
+
+      {/* Controlled by the header actions above; also auto-opens once on a
+          visitor's first load. Renders no trigger of its own. */}
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
 
       {loadError ? (
         <div className="flex flex-1 items-center justify-center p-8 text-center">

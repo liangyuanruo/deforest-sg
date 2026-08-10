@@ -29,11 +29,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        {/* Apply the OS color scheme before paint to avoid a flash. */}
+        {/* Apply the saved preference (else the OS scheme) before paint, so the
+            theme toggle never flashes on load. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark')}}catch(e){}",
+              "try{var t=localStorage.getItem('theme');if(t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark')}}catch(e){}",
           }}
         />
         <TooltipProvider>{children}</TooltipProvider>
