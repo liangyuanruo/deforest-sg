@@ -1,7 +1,7 @@
 "use client";
 
 import type { SVGProps } from "react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
 import { cn } from "@/lib/utils";
 
 export const GITHUB_REPO_URL = "https://github.com/liangyuanruo/deforest";
-const ABOUT_SEEN_KEY = "deforest_about_seen";
 
 /**
  * GitHub octocat mark. This lucide-react version ships no brand/logo icons
@@ -68,9 +67,10 @@ export function GitHubLink({ className }: { className?: string }) {
 }
 
 /**
- * About / motivation dialog. Controlled by the header (opened from the desktop
- * "About" button or the mobile hamburger menu item), and once automatically on a
- * visitor's first load (tracked via localStorage). Renders no trigger of its own.
+ * About / motivation dialog. Controlled by the header — opened only from the
+ * desktop "About" button or the mobile hamburger menu item; it never auto-opens.
+ * Renders no trigger of its own. Full-screen on phones, a centered dialog on
+ * desktop.
  */
 export function AboutModal({
   open,
@@ -83,36 +83,14 @@ export function AboutModal({
   // focuses the first link and scrolls the title out of view).
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  // Open once on a visitor's first load. localStorage is read inside the effect
-  // (client-only, guarded), and the open is deferred to the next frame so it is
-  // not a synchronous set-state-in-effect.
-  useEffect(() => {
-    let seen = true;
-    try {
-      seen = localStorage.getItem(ABOUT_SEEN_KEY) !== null;
-    } catch {
-      seen = true;
-    }
-    if (seen) return;
-    // Persist inside the rAF callback (not before) so React 19 StrictMode's
-    // double-invoke — mount, cleanup, mount — doesn't mark it seen on the first
-    // pass and then skip opening on the second.
-    const id = requestAnimationFrame(() => {
-      onOpenChange(true);
-      try {
-        localStorage.setItem(ABOUT_SEEN_KEY, "1");
-      } catch {
-        // localStorage unavailable — still opened once for this visit.
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [onOpenChange]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" initialFocus={titleRef}>
+      <DialogContent
+        className="max-sm:top-0 max-sm:left-0 max-sm:h-full max-sm:max-h-full max-sm:w-full max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:grid-rows-[auto_minmax(0,1fr)_auto] max-sm:rounded-none sm:max-w-2xl"
+        initialFocus={titleRef}
+      >
         <DialogHeader>
-          <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
+          <DialogTitle ref={titleRef} tabIndex={-1} className="pr-8 outline-none">
               Which forests does the Master Plan 2025 plan to develop?
             </DialogTitle>
             <DialogDescription>
@@ -122,7 +100,7 @@ export function AboutModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1 text-sm text-foreground">
+          <div className="flex max-h-[60vh] min-h-0 flex-col gap-4 overflow-y-auto pr-1 text-sm text-foreground max-sm:max-h-none">
             <section>
               <h3 className="font-semibold">What this shows</h3>
               <p className="mt-1 text-muted-foreground">
