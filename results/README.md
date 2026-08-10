@@ -30,7 +30,7 @@ overlap). Sorted by `area_ha` descending.
 | --- | --- |
 | `id` | OSM object id of the source forest polygon |
 | `rank` | 1 = largest threatened area |
-| `label` | Display name: OSM `name` if present, else `"Unnamed forest near <locality>"` |
+| `label` | Display name: OSM `name` if present; else `"<Site> (forest patch)"` if the patch falls inside a known AOI (e.g. Gillman Barracks); else `"Unnamed forest near <locality>"` |
 | `name` | OSM forest name, or `null` |
 | `locality` | Nearest OSM locality (e.g. "Simpang", "Tagore") — used when unnamed |
 | `area_ha` | **Threatened area** (forest ∩ development zones), hectares |
@@ -41,7 +41,7 @@ overlap). Sorted by `area_ha` descending.
 | `gpr` | Plot ratio(s) of the overlapping zones — numeric gross plot ratio, or a URA code (e.g. `LND`, `EVA`) where no ratio is assigned |
 | `centroid_lon`, `centroid_lat` | A representative point inside the patch (for map labels/markers) |
 | `source_layer` | OSM layer the forest came from (`natural`; `landuse` is empty in this extract) |
-| `context`, `wildlife`, `status` | Curated background from `analysis/site_context.py` (named sites only; else `null`) |
+| `context`, `wildlife`, `status` | Curated background from `analysis/site_context.py` — matched by OSM `name`, or by AOI bbox for unnamed announced sites like Gillman Barracks; else `null` |
 | `source` | `"OSM_forest ∩ URA_MP2025"` |
 
 ## 2. `forest_all.geojson` — context: all mapped `natural=forest` in Singapore
@@ -60,10 +60,18 @@ extract (5,007 ha of 16,291 ha). Excluded on purpose:
 - **Other greenery tags** — `natural=park`, `landuse=grass/meadow/orchard/scrub`, etc. are
   not included. (`landuse=forest` and `natural=wood` don't exist in this extract, so nothing
   is lost there.)
+- **The gazetted nature reserves** — Central Catchment (MacRitchie, Upper/Lower Peirce),
+  Bukit Timah, and the Mandai forest are **absent from this OSM extract entirely**: probe
+  points deep inside them hit no `natural` *or* `landuse` polygon. In OSM these are tagged
+  `leisure=nature_reserve` / `boundary=protected_area`, which this Geofabrik-style extract
+  (layers: natural, landuse, buildings, railways, points, waterways, places, roads) does
+  not ship. So the largest contiguous green mass in Singapore is not in this layer.
 
-Consequence: any mature area or gazetted reserve that OSM tags as something other than
-`natural=forest` will not appear. This matches the confirmed data source (`natural=forest`)
-but bounds what "forest" means here.
+Consequence: `forest_all` is **not** "all forest/greenery in Singapore" — it is the mapped
+`natural=forest` patches, which skew toward *secondary-forest fragments outside the reserves*
+(Toh Tuck, Clementi, Dover, etc.). This is fine for the headline question — the reserves are
+protected, not development-zoned, so they are not part of the planned-deforestation footprint
+— but it bounds what "forest" means here.
 
 | Property | Meaning |
 | --- | --- |

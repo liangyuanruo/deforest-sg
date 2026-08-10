@@ -84,7 +84,9 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
 4. **Overlay** forest × MP2025 **development** zones (see `DEVELOPMENT_ZONES` in
    `run_analysis.py`), keeping each fragment's `LU_DESC` and `GPR`.
 5. **Aggregate** fragments to one record per forest polygon; label by OSM `name`, else
-   nearest OSM locality; attach curated context from `site_context.py`.
+   nearest OSM locality; attach curated context from `site_context.py`. Unnamed patches
+   that fall inside a known AOI (e.g. Gillman Barracks, whose forest has no OSM name)
+   inherit that site's context and a `"<Site> (forest patch)"` label.
 6. **Validate** against Maju Forest (by name) and Gillman Barracks (by AOI).
 
 **Compute note:** cost is bounded by the small forest set (≈831 polygons), not the

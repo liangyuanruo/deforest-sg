@@ -214,6 +214,28 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     patches["wildlife"] = ctx.apply(lambda c: c.get("wildlife") if c else None)
     patches["status"] = ctx.apply(lambda c: c.get("status") if c else None)
 
+    # AOI-based enrichment. Some announced sites are known by location, not by an OSM
+    # forest name (e.g. Gillman Barracks — the surrounding forest is unnamed). Any
+    # *unnamed* patch that falls inside a known AOI bbox inherits that site's curated
+    # context and a site-specific label, so it isn't lost as an anonymous sliver.
+    aoi_geoms = {name: _aoi_geom(cfg["bbox_wgs84"]) for name, cfg in AOI_SITES.items()}
+
+    def _blank(v):  # True for None, NaN, or empty/whitespace string
+        return not (isinstance(v, str) and v.strip())
+
+    for i, patch in patches.iterrows():
+        # Only fill unnamed patches that don't already carry a name-based context.
+        if not _blank(patches.at[i, "name"]) or not _blank(patches.at[i, "context"]):
+            continue
+        for name, aoi in aoi_geoms.items():
+            if patch.geometry.intersects(aoi):
+                cfg = AOI_SITES[name]
+                patches.at[i, "context"] = cfg["context"]
+                patches.at[i, "wildlife"] = cfg.get("wildlife")
+                patches.at[i, "status"] = cfg.get("status")
+                patches.at[i, "label"] = f"{name} (forest patch)"
+                break
+
     # Representative point in lon/lat.
     rp = patches.to_crs(WEB_CRS).geometry.representative_point()
     patches["centroid_lon"] = rp.x.round(6)
