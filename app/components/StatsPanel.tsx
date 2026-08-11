@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, TreePine } from "lucide-react";
+import { ChevronDown, Info, TreePine } from "lucide-react";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatHa, formatNumber, formatPercent } from "@/lib/format";
 import {
   aggregateByLandUse,
   colorForLandUse,
+  descriptionForLandUse,
   toColoredSlices,
 } from "@/lib/landuse";
 import { MAP_LAYERS, type ColorMode } from "@/lib/layers";
@@ -118,9 +124,30 @@ export function StatsPanel({
 
           {threatenedHa > 0 && slices.length > 0 && (
             <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                By URA land zoning
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  By URA land zoning
+                </p>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label="What is URA land zoning?"
+                        className="text-muted-foreground/70 hover:text-foreground"
+                      >
+                        <Info className="size-3" />
+                      </button>
+                    }
+                  />
+                  <TooltipContent side="right" className="max-w-[15rem]">
+                    URA land zoning is the use each site is planned for under the
+                    Master Plan 2025 — e.g. housing, industry, or a reserve site
+                    held for future development. Hover a patch on the map, or
+                    select one, to see what it&rsquo;s zoned for.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div className="flex h-2 w-full gap-[2px] overflow-hidden rounded-full">
                 {slices.map((slice) => (
                   <span
@@ -139,6 +166,7 @@ export function StatsPanel({
                   <li
                     key={slice.luDesc}
                     className="flex items-center gap-1.5 text-[11px]"
+                    title={descriptionForLandUse(slice.luDesc) ?? slice.luDesc}
                   >
                     <span
                       aria-hidden

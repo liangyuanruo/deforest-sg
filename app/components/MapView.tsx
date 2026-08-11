@@ -6,7 +6,11 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
 import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
-import { colorForLandUse, landUseFillExpression } from "@/lib/landuse";
+import {
+  colorForLandUse,
+  descriptionForLandUse,
+  landUseFillExpression,
+} from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
   DevelopmentZoneFeatureCollection,
@@ -348,12 +352,18 @@ export function MapView(props: MapViewProps) {
         const luRow = lu
           ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
           : "";
+        // Plain-language gloss so the URA code is legible to non-planners.
+        const desc = lu ? descriptionForLandUse(lu) : undefined;
+        const descRow = desc
+          ? `<div class="deforest-popup__desc">${escapeHtml(desc)}</div>`
+          : "";
         popup
           .setLngLat(e.lngLat)
           .setHTML(
             `<div class="deforest-popup__body"><div class="deforest-popup__title">${label}</div>` +
               (area ? `<div class="deforest-popup__meta">${area} under threat</div>` : "") +
               luRow +
+              descRow +
               `</div>`,
           )
           .addTo(map);

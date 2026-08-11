@@ -5,7 +5,7 @@ import { Layers, MapPin, Ruler, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatHa, formatPercent } from "@/lib/format";
-import { colorForLandUse } from "@/lib/landuse";
+import { colorForLandUse, descriptionForLandUse } from "@/lib/landuse";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ export interface SiteDetailProps {
 export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
   const percent = formatPercent(site.threatened_fraction);
   const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
+  const luDescription = descriptionForLandUse(site.dominant_lu_desc);
 
   return (
     <div
@@ -86,6 +87,11 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
             value={site.dominant_lu_desc}
             swatch={colorForLandUse(site.dominant_lu_desc)}
           />
+          {luDescription && (
+            <p className="-mt-0.5 text-xs leading-snug text-muted-foreground">
+              {luDescription}
+            </p>
+          )}
           {site.gpr && <Row label="Plot ratio" value={site.gpr} />}
         </dl>
 
