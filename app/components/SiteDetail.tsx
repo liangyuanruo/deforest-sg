@@ -1,10 +1,21 @@
 "use client";
 
-import { Layers, MapPin, Ruler, X } from "lucide-react";
+import { Info, Layers, MapPin, Ruler, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatHa, formatPercent } from "@/lib/format";
+import {
+  describeGprCode,
+  formatGprRange,
+  GPR_EXPLAINER,
+  parseGpr,
+} from "@/lib/gpr";
 import { colorForLandUse, descriptionForLandUse } from "@/lib/landuse";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
@@ -24,6 +35,9 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
   const percent = formatPercent(site.threatened_fraction);
   const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
   const luDescription = descriptionForLandUse(site.dominant_lu_desc);
+  const gpr = parseGpr(site.gpr);
+  const gprRange = formatGprRange(gpr.ratios);
+  const hasGpr = gpr.ratios.length > 0 || gpr.codes.length > 0;
 
   return (
     <div
@@ -92,7 +106,45 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
               {luDescription}
             </p>
           )}
-          {site.gpr && <Row label="Plot ratio" value={site.gpr} />}
+          {hasGpr && (
+            <Row
+              label="Plot ratio"
+              value={gprRange ?? "—"}
+              labelAfter={
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label="What is plot ratio?"
+                        className="text-muted-foreground/70 hover:text-foreground"
+                      >
+                        <Info className="size-3" />
+                      </button>
+                    }
+                  />
+                  <TooltipContent side="top" className="max-w-[15rem]">
+                    {GPR_EXPLAINER}
+                  </TooltipContent>
+                </Tooltip>
+              }
+            />
+          )}
+          {gpr.codes.map((code) => {
+            const d = describeGprCode(code);
+            return (
+              <p
+                key={code}
+                className="-mt-0.5 text-xs leading-snug text-muted-foreground"
+              >
+                <span className="font-medium text-foreground">
+                  {code}
+                  {d ? ` — ${d.label}` : ""}
+                </span>
+                {d ? <>. {d.description}</> : null}
+              </p>
+            );
+          })}
         </dl>
 
         {(site.context || site.wildlife || site.status) && (
@@ -120,11 +172,14 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
 function Row({
   icon,
   label,
+  labelAfter,
   value,
   swatch,
 }: {
   icon?: React.ReactNode;
   label: string;
+  /** Optional element after the label text (e.g. an info tooltip trigger). */
+  labelAfter?: React.ReactNode;
   value: string;
   /** Optional colour dot shown before the value (e.g. the URA land-use fill). */
   swatch?: string;
@@ -134,6 +189,7 @@ function Row({
       <dt className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         {label}
+        {labelAfter}
       </dt>
       <dd className="flex min-w-0 items-center gap-1.5 text-right font-medium text-foreground">
         {swatch && (

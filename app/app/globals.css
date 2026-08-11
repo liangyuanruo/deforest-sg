@@ -172,6 +172,16 @@
   font-size: 0.6875rem;
   line-height: 1.4;
 }
+.deforest-popup__gpr {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+}
+.deforest-popup__gprCodes {
+  display: block;
+  color: color-mix(in oklab, var(--muted-foreground) 85%, transparent);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
 
 /* Categorical chart palette (dataviz-validated, CVD-safe), theme-aware.
    Assign by entity in a fixed order — never by rank. */

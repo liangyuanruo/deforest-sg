@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
+import { formatGprRange, GPR_CODE_LABEL, parseGpr } from "@/lib/gpr";
 import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
 import {
   colorForLandUse,
@@ -345,6 +346,7 @@ export function MapView(props: MapViewProps) {
           label?: string;
           area_ha?: number;
           dominant_lu_desc?: string;
+          gpr?: string | null;
         } | null;
         const label = escapeHtml(pr?.label ?? "Forest patch");
         const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
@@ -357,6 +359,22 @@ export function MapView(props: MapViewProps) {
         const descRow = desc
           ? `<div class="deforest-popup__desc">${escapeHtml(desc)}</div>`
           : "";
+        // Plot ratio: numeric density as a range + a compact code legend.
+        const gpr = parseGpr(pr?.gpr);
+        const gprRange = formatGprRange(gpr.ratios);
+        const gprCodes = gpr.codes
+          .map((c) => `${c}${GPR_CODE_LABEL[c] ? ` — ${GPR_CODE_LABEL[c]}` : ""}`)
+          .join(" · ");
+        const gprRow =
+          gprRange || gprCodes
+            ? `<div class="deforest-popup__gpr">Plot ratio${
+                gprRange ? ` ${escapeHtml(gprRange)}` : ""
+              }${
+                gprCodes
+                  ? `<span class="deforest-popup__gprCodes">${escapeHtml(gprCodes)}</span>`
+                  : ""
+              }</div>`
+            : "";
         popup
           .setLngLat(e.lngLat)
           .setHTML(
@@ -364,6 +382,7 @@ export function MapView(props: MapViewProps) {
               (area ? `<div class="deforest-popup__meta">${area} under threat</div>` : "") +
               luRow +
               descRow +
+              gprRow +
               `</div>`,
           )
           .addTo(map);
