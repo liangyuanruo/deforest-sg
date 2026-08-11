@@ -82,7 +82,7 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
         <dl className="flex flex-col gap-2 text-xs">
           <Row
             icon={<Layers className="size-3.5" />}
-            label="Intended land use"
+            label="URA zoning"
             value={site.dominant_lu_desc}
             swatch={colorForLandUse(site.dominant_lu_desc)}
           />

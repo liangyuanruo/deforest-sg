@@ -9,14 +9,29 @@ import {
   colorForLandUse,
   toColoredSlices,
 } from "@/lib/landuse";
+import { MAP_LAYERS, type ColorMode } from "@/lib/layers";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
+
+/**
+ * The threatened-forest layer's map identity (red swatch + label), reused as the
+ * panel's map-key row so the key and the map can't drift. Non-null: the layer is
+ * a fixed member of MAP_LAYERS.
+ */
+const THREATENED_KEY = MAP_LAYERS.find((l) => l.key === "threatened")!;
 
 export interface StatsPanelProps {
   /** Filtered live set of threatened sites. */
   sites: ThreatenedProperties[];
   /** summary.totals.total_forest_ha_sg — denominator for "% of mapped forest". */
   totalForestHa: number;
+  /**
+   * How the threatened layer is coloured on the map. In "status" mode every patch
+   * is the alarm red, so the panel shows a "Threatened forest" red key row; in
+   * "landuse" mode the patches take their zoning colours, which the breakdown
+   * below already keys, so the red row is omitted.
+   */
+  colorMode: ColorMode;
   className?: string;
 }
 
@@ -25,7 +40,12 @@ export interface StatsPanelProps {
  * breakdown collapses (default collapsed on small screens) so it never eats
  * the map on a phone.
  */
-export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps) {
+export function StatsPanel({
+  sites,
+  totalForestHa,
+  colorMode,
+  className,
+}: StatsPanelProps) {
   // Collapsed by default on small screens so the breakdown never covers the
   // map on a phone. This panel only mounts client-side (Explorer renders it
   // once data is ready, i.e. never during SSR), so reading the viewport in the
@@ -46,7 +66,7 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
   return (
     <div
       className={cn(
-        "w-56 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border/60 bg-card/90 shadow-sm backdrop-blur",
+        "w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border/60 bg-card/90 shadow-sm backdrop-blur",
         className,
       )}
     >
@@ -80,10 +100,26 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
             <Figure value={formatNumber(siteCount)} label="sites" />
           </div>
 
+          {/* Map key. In "status" mode every threatened patch is the alarm red,
+              so this row is what the red on the map means. Omitted in "landuse"
+              mode, where the patches take the zoning colours the breakdown below
+              already keys. Sits in its own bordered zone (square swatch, unlike
+              the breakdown's round dots) so it doesn't read as a breakdown item. */}
+          {colorMode === "status" && (
+            <div className="flex items-center gap-2 border-t border-border/60 pt-2.5 text-[11px]">
+              <span
+                aria-hidden
+                className="size-2.5 shrink-0 rounded-sm ring-1 ring-border"
+                style={{ backgroundColor: THREATENED_KEY.swatch }}
+              />
+              <span className="text-foreground">{THREATENED_KEY.label}</span>
+            </div>
+          )}
+
           {threatenedHa > 0 && slices.length > 0 && (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5">
               <p className="text-[11px] font-medium text-muted-foreground">
-                By intended land use
+                By URA land zoning
               </p>
               <div className="flex h-2 w-full gap-[2px] overflow-hidden rounded-full">
                 {slices.map((slice) => (
@@ -114,6 +150,10 @@ export function StatsPanel({ sites, totalForestHa, className }: StatsPanelProps)
                     </span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
                       {formatHa(slice.areaHa)}
+                      <span className="text-muted-foreground/60">
+                        {" · "}
+                        {formatPercent(slice.areaHa / threatenedHa)}
+                      </span>
                     </span>
                   </li>
                 ))}

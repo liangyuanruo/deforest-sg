@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { ChevronDown, Layers } from "lucide-react";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
-import { MAP_LAYERS, type ColorMode, type MapLayerVisibility } from "@/lib/layers";
-import {
-  aggregateByLandUse,
-  colorForLandUse,
-  landUseFillExpression,
-  OTHER_LABEL,
-  toColoredSlices,
-  type LandUseSlice,
-} from "@/lib/landuse";
+import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
+import { colorForLandUse, landUseFillExpression } from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
   DevelopmentZoneFeatureCollection,
@@ -23,9 +15,6 @@ import type {
 } from "@/lib/schema";
 
 export type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
-
-/** How many land-use classes to name in the map legend before folding to "Other". */
-const LEGEND_MAX_CLASSES = 8;
 
 export interface MapViewProps {
   /** All mapped OSM forest (context base layer). */
@@ -501,14 +490,6 @@ export function MapView(props: MapViewProps) {
     });
   }, [basemap]);
 
-  // Land-use legend rows: the classes present in the threatened set, top N by
-  // area then "Other". Only computed (and shown) in land-use mode.
-  const landUseSlices = useMemo<LandUseSlice[]>(() => {
-    if (props.colorMode !== "landuse" || !props.threatened) return [];
-    const agg = aggregateByLandUse(props.threatened.features.map((f) => f.properties));
-    return toColoredSlices(agg, LEGEND_MAX_CLASSES);
-  }, [props.colorMode, props.threatened]);
-
   return (
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
@@ -537,25 +518,13 @@ export function MapView(props: MapViewProps) {
           className="flex-1 sm:flex-none"
         />
       </div>
-
-      {/* Legend: bottom-left, desktop only. On phones it's hidden — the
-          collapsible "forest under threat" card (top-left) carries the same
-          land-use key, so the map key would be redundant there and its footprint
-          is better given to the toggle row. */}
-      <div className="absolute bottom-9 left-3 z-10 hidden sm:block">
-        <MapLegend
-          layers={props.layers}
-          colorMode={props.colorMode}
-          landUseSlices={landUseSlices}
-        />
-      </div>
     </div>
   );
 }
 
 const COLOR_MODE_OPTIONS: { key: ColorMode; label: string }[] = [
   { key: "status", label: "Status" },
-  { key: "landuse", label: "Land use" },
+  { key: "landuse", label: "URA zoning" },
 ];
 
 const BASEMAP_OPTIONS: { key: Basemap; label: string }[] = [
@@ -623,109 +592,4 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
   map.setLayoutProperty(LYR.forestFill, "visibility", v(layers.forest));
   map.setLayoutProperty(LYR.threatFill, "visibility", v(layers.threatened));
   // The zones layer is handled by syncZones.
-}
-
-/**
- * Passive legend / map key. In "status" mode it lists the visible layers; in
- * "landuse" mode it keys the URA land-use colours present in the threatened set.
- *
- * Always open on desktop. On phones it collapses to a tappable header so the key
- * is reachable without a tall overlay permanently covering the map (collapsed by
- * default). Positioning is handled by the overlay cluster in MapView.
- */
-function MapLegend({
-  layers,
-  colorMode,
-  landUseSlices,
-}: {
-  layers: MapLayerVisibility;
-  colorMode: ColorMode;
-  landUseSlices: LandUseSlice[];
-}) {
-  // Collapsed by default on small screens; the md:* classes force the body open
-  // on desktop regardless. MapView is client-only, so reading the viewport in
-  // the lazy initializer is safe and correct from first paint.
-  const [expanded, setExpanded] = useState(
-    () =>
-      typeof window === "undefined" ||
-      window.matchMedia("(min-width: 768px)").matches,
-  );
-
-  const rows =
-    colorMode === "landuse"
-      ? landUseSlices
-          .map((slice) => ({
-            key: slice.luDesc,
-            color: colorForLandUse(slice.luDesc),
-            label: slice.luDesc === OTHER_LABEL ? "Other uses" : slice.luDesc,
-            ring: true,
-          }))
-          // Alphabetical so a class is easy to find; the catch-all "Other uses"
-          // is always pinned to the bottom regardless of its name.
-          .sort((a, b) => {
-            const aOther = a.label === "Other uses";
-            const bOther = b.label === "Other uses";
-            if (aOther !== bOther) return aOther ? 1 : -1;
-            return a.label.localeCompare(b.label);
-          })
-      : MAP_LAYERS.filter((l) => layers[l.key]).map((l) => ({
-          key: l.key,
-          color: l.swatch,
-          label: l.label,
-          ring: false,
-        }));
-
-  if (rows.length === 0) return null;
-
-  const title = colorMode === "landuse" ? "Intended land use" : "Map key";
-
-  return (
-    <div className="pointer-events-none max-w-[13rem] overflow-hidden rounded-lg border border-border/60 bg-card/85 text-xs shadow-sm backdrop-blur">
-      {/* Mobile-only collapse toggle (hidden on desktop, where the key is always open). */}
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className="pointer-events-auto flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/40 md:hidden"
-      >
-        <Layers className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="font-medium text-muted-foreground">{title}</span>
-        <ChevronDown
-          className={cn(
-            "ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform",
-            expanded && "rotate-180",
-          )}
-        />
-      </button>
-
-      <div
-        className={cn(
-          "px-3 pb-2",
-          expanded ? "block border-t border-border/60 pt-2" : "hidden",
-          "md:block md:border-t-0 md:pt-2",
-        )}
-      >
-        {colorMode === "landuse" && (
-          <p className="mb-1.5 hidden font-medium text-muted-foreground md:block">
-            Intended land use
-          </p>
-        )}
-        <ul className="space-y-1">
-          {rows.map((row) => (
-            <li key={row.key} className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className={cn(
-                  "inline-block size-2.5 shrink-0 rounded-sm",
-                  row.ring && "ring-1 ring-border",
-                )}
-                style={{ backgroundColor: row.color }}
-              />
-              <span className="truncate text-foreground">{row.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
 }

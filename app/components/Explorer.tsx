@@ -254,6 +254,7 @@ export function Explorer() {
                 <StatsPanel
                   sites={landUseFilteredSites}
                   totalForestHa={totalForestHa}
+                  colorMode={colorMode}
                 />
               )}
             </div>
