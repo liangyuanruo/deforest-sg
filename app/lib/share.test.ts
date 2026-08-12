@@ -55,7 +55,9 @@ describe("shareText", () => {
   });
 
   it("falls back to the app-level question with no forest", () => {
-    expect(shareText(null)).toBe("Which forests will Singapore lose?");
+    expect(shareText(null)).toBe(
+      "Which forests will Singapore lose to development?",
+    );
   });
 });
 

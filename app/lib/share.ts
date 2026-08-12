@@ -69,7 +69,7 @@ export function buildShareUrl(
 export function shareText(label: string | null): string {
   return label
     ? `${label} is among the Singapore forests zoned for development.`
-    : "Which forests will Singapore lose?";
+    : "Which forests will Singapore lose to development?";
 }
 
 /** WhatsApp share deep-link. `wa.me/?text=` (no phone number) opens the app's
