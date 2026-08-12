@@ -253,6 +253,32 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
 }
 
 /**
+ * Fly the camera to the selected patch's centroid. No-op when nothing is
+ * selected or the feature isn't in the current data. Shared by the one-time
+ * `load` handler (so a `/forest/<id>` deep link frames its patch as soon as the
+ * map is ready) and the selection effect (clicks/search after mount) so both
+ * paths frame a patch identically. `Math.max(getZoom(), 13.5)` zooms in from the
+ * Singapore overview but never pulls back if the user is already closer.
+ */
+function flyToSelected(
+  map: mapboxgl.Map,
+  threatened: ThreatenedFeatureCollection | null,
+  selectedId: number | null,
+) {
+  if (selectedId === null) return;
+  const feature = threatened?.features.find(
+    (f) => f.properties.id === selectedId,
+  );
+  if (!feature) return;
+  map.flyTo({
+    center: [feature.properties.centroid_lon, feature.properties.centroid_lat],
+    zoom: Math.max(map.getZoom(), 13.5),
+    duration: 900,
+    essential: true,
+  });
+}
+
+/**
  * Imperative Mapbox GL map. The map object lives outside React's render cycle
  * (in refs); props are mirrored into `propsRef` so the one-time `load` handler
  * always sees the latest data, and dedicated effects push prop changes into the
@@ -346,6 +372,10 @@ export function MapView(props: MapViewProps) {
       addSourcesAndLayers(map, p, "standard");
       selectedRef.current = p.selectedId;
       readyRef.current = true;
+      // Frame an initial selection (a `/forest/<id>` deep link): the selection
+      // effect already ran and bailed while readyRef was false, so it won't
+      // re-fire on its own — fly here now that the map is ready.
+      flyToSelected(map, p.threatened, p.selectedId);
 
       // --- interaction (bound once; survives basemap style swaps) ---
       map.on("mousemove", LYR.threatFill, (e) => {
@@ -483,17 +513,7 @@ export function MapView(props: MapViewProps) {
         { source: SRC.threatened, id: props.selectedId },
         { selected: true },
       );
-      const feature = props.threatened?.features.find(
-        (f) => f.properties.id === props.selectedId,
-      );
-      if (feature) {
-        map.flyTo({
-          center: [feature.properties.centroid_lon, feature.properties.centroid_lat],
-          zoom: Math.max(map.getZoom(), 13.5),
-          duration: 900,
-          essential: true,
-        });
-      }
+      flyToSelected(map, props.threatened, props.selectedId);
     }
     selectedRef.current = props.selectedId;
   }, [props.selectedId, props.threatened]);
