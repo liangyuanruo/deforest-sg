@@ -301,6 +301,26 @@ export function MapView(props: MapViewProps) {
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
+    // "Go to my current location". Mapbox's own control covers desktop and mobile
+    // in one: a touch-sized button beside the zoom controls, the browser
+    // Geolocation prompt, a live location dot with accuracy circle, and (on
+    // phones) the device heading. `trackUserLocation` keeps the dot following the
+    // user and gives the button its centered/tracking states; high accuracy asks
+    // for GPS on mobile. Geolocation needs a secure context — works on localhost
+    // and the HTTPS deploy. A denied/failed fix is surfaced as a brief notice.
+    const geolocate = new mapboxgl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showUserHeading: true,
+    });
+    map.addControl(geolocate, "top-right");
+    geolocate.on("error", (err) => {
+      // PERMISSION_DENIED (1) is a user choice, not a fault — stay quiet.
+      if (err.code !== 1) {
+        console.warn("Geolocation failed:", err.message);
+      }
+    });
+
     // mapbox-gl.css forces `.mapboxgl-map { position: relative }`, and the flex/
     // dynamic-import mount can settle the container size *after* init. Keep the
     // canvas in sync on resize; the camera is a fixed center/zoom, so it needs no
