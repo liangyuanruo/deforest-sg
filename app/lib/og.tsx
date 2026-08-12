@@ -6,20 +6,24 @@ import type { ThreatenedProperties } from "@/lib/schema";
 /** The TreePine glyph, copied verbatim from `app/icon.svg` so every card
  *  matches the favicon/header mark. Sized by the caller. */
 function TreeGlyph({ size, stroke }: { size: number; stroke: string }) {
+  // Rotated 90° anticlockwise so the tree lies on its side ("fallen") — the
+  // same fallen brand mark the header animates into. Static image: no motion.
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={stroke}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z" />
-      <path d="M12 22v-3" />
-    </svg>
+    <div style={{ display: "flex", transform: "rotate(-90deg)" }}>
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z" />
+        <path d="M12 22v-3" />
+      </svg>
+    </div>
   );
 }
 
@@ -45,19 +49,23 @@ export function renderOgImage() {
           background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
         }}
       >
-        <svg
-          width="220"
-          height="220"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z" />
-          <path d="M12 22v-3" />
-        </svg>
+        {/* Rotated 90° anticlockwise — the "fallen" brand mark (matches the
+            header's fall animation; static image, so no motion here). */}
+        <div style={{ display: "flex", transform: "rotate(-90deg)" }}>
+          <svg
+            width="220"
+            height="220"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z" />
+            <path d="M12 22v-3" />
+          </svg>
+        </div>
         <div
           style={{
             marginTop: 32,

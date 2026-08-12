@@ -196,7 +196,10 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
           itself (SearchBox), so there's no separate filter slot in the bar. */}
       <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:gap-3 sm:px-4">
         <div className="flex shrink-0 items-center gap-2 sm:flex-1">
-          <TreePine className="size-5 text-primary" />
+          {/* The brand mark "falls over" on load, then rests on its side —
+              a small visual pun on deforestation. See .deforest-logo in
+              globals.css (pivots at the trunk base; honours reduced-motion). */}
+          <TreePine className="deforest-logo size-5 text-primary" />
           <h1 className="hidden text-sm font-semibold sm:block">Deforest SG</h1>
         </div>
 
