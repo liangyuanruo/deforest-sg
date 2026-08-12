@@ -51,6 +51,17 @@ export interface StatsPanelProps {
  * breakdown collapses (default collapsed on small screens) so it never eats
  * the map on a phone.
  */
+/** Shared aggregation so the headline and the breakdown (and the desktop card
+ *  and mobile sheet that host them) all read the same numbers. */
+function useStatsAgg(sites: ThreatenedProperties[], totalForestHa: number) {
+  return useMemo(() => {
+    const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
+    const fraction = totalForestHa > 0 ? threatenedHa / totalForestHa : 0;
+    const slices = toColoredSlices(aggregateByLandUse(sites), 6);
+    return { threatenedHa, siteCount: sites.length, fraction, slices };
+  }, [sites, totalForestHa]);
+}
+
 export function StatsPanel({
   sites,
   totalForestHa,
@@ -67,13 +78,6 @@ export function StatsPanel({
       window.matchMedia("(min-width: 768px)").matches,
   );
 
-  const { threatenedHa, siteCount, fraction, slices } = useMemo(() => {
-    const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
-    const fraction = totalForestHa > 0 ? threatenedHa / totalForestHa : 0;
-    const slices = toColoredSlices(aggregateByLandUse(sites), 6);
-    return { threatenedHa, siteCount: sites.length, fraction, slices };
-  }, [sites, totalForestHa]);
-
   return (
     <div
       className={cn(
@@ -87,18 +91,7 @@ export function StatsPanel({
         aria-expanded={expanded}
         className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
       >
-        <TreePine className="size-4 shrink-0 text-primary" />
-        <span className="flex min-w-0 flex-col leading-tight">
-          <span className="text-base font-semibold tabular-nums text-foreground">
-            {formatHa(threatenedHa)}
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            forest under threat
-          </span>
-          <span className="text-[11px] text-muted-foreground/80">
-            {formatFootballFields(threatenedHa)}
-          </span>
-        </span>
+        <StatsHeadline sites={sites} />
         <ChevronDown
           className={cn(
             "ml-auto size-4 shrink-0 text-muted-foreground transition-transform",
@@ -108,8 +101,61 @@ export function StatsPanel({
       </button>
 
       {expanded && (
-        <div className="flex flex-col gap-2.5 border-t border-border/60 px-3 py-2.5">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="border-t border-border/60 px-3 py-2.5">
+          <StatsBreakdown
+            sites={sites}
+            totalForestHa={totalForestHa}
+            colorMode={colorMode}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The always-visible headline: total hectares under threat, in words + football
+ * fields. Presentational (no button/chevron) so it can sit inside the desktop
+ * card's toggle button or the mobile sheet's peek header alike.
+ */
+export function StatsHeadline({ sites }: { sites: ThreatenedProperties[] }) {
+  const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
+  return (
+    <>
+      <TreePine className="size-4 shrink-0 text-primary" />
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="text-base font-semibold tabular-nums text-foreground">
+          {formatHa(threatenedHa)}
+        </span>
+        <span className="text-[11px] text-muted-foreground">
+          forest under threat
+        </span>
+        <span className="text-[11px] text-muted-foreground/80">
+          {formatFootballFields(threatenedHa)}
+        </span>
+      </span>
+    </>
+  );
+}
+
+/**
+ * The expanded breakdown: headline share + site count, the map key, and the
+ * per-land-use split. No card chrome — the desktop card and the mobile sheet
+ * each supply their own container.
+ */
+export function StatsBreakdown({
+  sites,
+  totalForestHa,
+  colorMode,
+}: Omit<StatsPanelProps, "className">) {
+  const { threatenedHa, siteCount, fraction, slices } = useStatsAgg(
+    sites,
+    totalForestHa,
+  );
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
             <Figure value={formatPercent(fraction)} label="of mapped forest" />
             <Figure value={formatNumber(siteCount)} label="sites" />
           </div>
@@ -196,8 +242,6 @@ export function StatsPanel({
               </ul>
             </div>
           )}
-        </div>
-      )}
     </div>
   );
 }

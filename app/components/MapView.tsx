@@ -270,10 +270,21 @@ function flyToSelected(
     (f) => f.properties.id === selectedId,
   );
   if (!feature) return;
+  // On phones the detail bottom-sheet opens to ~half height and would cover a
+  // screen-centred patch, so pad the bottom of the fly's framing box by the
+  // sheet's coverage — the patch then frames in the visible upper half. Desktop
+  // (sheet absent) uses no padding.
+  const isMobile =
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 639px)").matches;
+  const padding = isMobile
+    ? { bottom: Math.round(window.innerHeight * 0.45) }
+    : undefined;
   map.flyTo({
     center: [feature.properties.centroid_lon, feature.properties.centroid_lat],
     zoom: Math.max(map.getZoom(), 13.5),
     duration: 2000,
+    padding,
     essential: true,
   });
 }

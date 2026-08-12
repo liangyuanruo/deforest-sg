@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Layers, MapPin, Ruler, X } from "lucide-react";
+import { Building2, Info, Layers, MapPin, Ruler, X } from "lucide-react";
 
 import { ShareButton } from "@/components/ShareButton";
 import { Badge } from "@/components/ui/badge";
@@ -33,13 +33,6 @@ export interface SiteDetailProps {
  * is ever on screen.
  */
 export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
-  const percent = formatPercent(site.threatened_fraction);
-  const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
-  const luDescription = descriptionForLandUse(site.dominant_lu_desc);
-  const gpr = parseGpr(site.gpr);
-  const gprRange = formatGprRange(gpr.ratios);
-  const hasGpr = gpr.ratios.length > 0 || gpr.codes.length > 0;
-
   return (
     <div
       className={cn(
@@ -73,8 +66,76 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 overflow-y-auto px-3 py-3">
-        <div className="flex flex-col gap-1.5">
+      <SiteDetailBody site={site} className="overflow-y-auto px-3 py-3" />
+    </div>
+  );
+}
+
+/**
+ * Condensed summary line for the mobile sheet's always-visible peek: the
+ * forest's name plus how much of it is under threat, with share/close actions.
+ * The action cluster is `data-sheet-no-drag` so tapping it never starts a sheet
+ * drag.
+ */
+export function SiteSheetPeek({
+  site,
+  onClose,
+}: {
+  site: ThreatenedProperties;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-sm font-semibold text-foreground">
+          {site.label}
+        </h2>
+        <p className="truncate text-xs text-muted-foreground">
+          {formatHa(site.area_ha)} under threat
+          {site.locality ? ` · ${site.locality}` : ""}
+        </p>
+        <p className="truncate text-xs text-muted-foreground/80">
+          {formatFootballFields(site.area_ha)}
+        </p>
+      </div>
+      <div data-sheet-no-drag className="flex shrink-0 items-center">
+        <ShareButton site={site} size="icon-sm" />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClose}
+          aria-label="Close details"
+          className="-mr-1"
+        >
+          <X />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The selected patch's detail content, without any card chrome. Shared by the
+ * desktop card ({@link SiteDetail}) and the mobile bottom sheet, so the two can't
+ * drift. `className` supplies the container's padding/scroll for each host.
+ */
+export function SiteDetailBody({
+  site,
+  className,
+}: {
+  site: ThreatenedProperties;
+  className?: string;
+}) {
+  const percent = formatPercent(site.threatened_fraction);
+  const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
+  const luDescription = descriptionForLandUse(site.dominant_lu_desc);
+  const gpr = parseGpr(site.gpr);
+  const gprRange = formatGprRange(gpr.ratios);
+  const hasGpr = gpr.ratios.length > 0 || gpr.codes.length > 0;
+
+  return (
+    <div className={cn("flex flex-col gap-3", className)}>
+      <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Ruler className="size-3.5" />
@@ -115,6 +176,7 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
           )}
           {hasGpr && (
             <Row
+              icon={<Building2 className="size-3.5" />}
               label="Plot ratio"
               value={gprRange ?? "—"}
               labelAfter={
@@ -171,7 +233,6 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
             )}
           </div>
         )}
-      </div>
     </div>
   );
 }

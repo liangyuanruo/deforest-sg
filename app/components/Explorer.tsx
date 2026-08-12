@@ -7,10 +7,11 @@ import { Info, TreePine } from "lucide-react";
 import { AboutModal, GitHubLink } from "@/components/AboutModal";
 import { FilterPanel } from "@/components/FilterPanel";
 import { HeaderMenu } from "@/components/HeaderMenu";
+import { MobileSheet, type SheetSnap } from "@/components/MobileSheet";
 import { SearchBox } from "@/components/SearchBox";
 import { ShareButton } from "@/components/ShareButton";
-import { SiteDetail } from "@/components/SiteDetail";
-import { StatsPanel } from "@/components/StatsPanel";
+import { SiteDetail, SiteDetailBody, SiteSheetPeek } from "@/components/SiteDetail";
+import { StatsBreakdown, StatsHeadline, StatsPanel } from "@/components/StatsPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,6 +71,11 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   const [colorMode, setColorMode] = useState<ColorMode>("status");
   const [aboutOpen, setAboutOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  // A deep link (`/forest/<id>`) lands with the sheet already raised to half so
+  // its patch is framed above it; a plain visit opens at the stats peek.
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>(
+    initialSelectedId != null ? "half" : "peek",
+  );
   const zonesRequestedRef = useRef(false);
 
   // Load the two core layers + summary once on mount (setState runs after the
@@ -135,7 +141,13 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   }, []);
   const handleClearLandUses = useCallback(() => setSelectedLandUses([]), []);
 
-  const handleSelect = useCallback((id: number | null) => setSelectedId(id), []);
+  const handleSelect = useCallback((id: number | null) => {
+    setSelectedId(id);
+    // On phones, opening a forest raises the detail sheet to its half snap (so
+    // the patch stays visible above it); closing drops it back to the stats
+    // peek. Inert on desktop, where the sheet is hidden.
+    setSheetSnap(id === null ? "peek" : "half");
+  }, []);
 
   // Mirror the selection into the address bar so any forest is deep-linkable by
   // copying the URL. `replaceState` (not the Next router) keeps this a
@@ -266,10 +278,11 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
             <div className="h-full w-full animate-pulse bg-muted" />
           )}
 
-          {/* Floating top-left panel: site detail when one is selected, else
-              the compact stats overlay. Only one is ever visible. */}
+          {/* Desktop: floating top-left panel — site detail when one is
+              selected, else the compact stats overlay. Only one is ever visible.
+              Hidden on phones, where the bottom sheet below takes over. */}
           {ready && (
-            <div className="absolute top-3 left-3 z-10">
+            <div className="absolute top-3 left-3 z-10 hidden sm:block">
               {selectedSite ? (
                 <SiteDetail
                   site={selectedSite}
@@ -283,6 +296,39 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                 />
               )}
             </div>
+          )}
+
+          {/* Phones: a draggable, non-modal bottom sheet (Google-Maps style).
+              Its peek line stays visible over the map; drag it up for detail.
+              The map stays interactive above it. Hidden on desktop (sm:hidden
+              lives inside MobileSheet). Same content as the desktop panel. */}
+          {ready && (
+            <MobileSheet
+              snap={sheetSnap}
+              onSnapChange={setSheetSnap}
+              peek={
+                selectedSite ? (
+                  <SiteSheetPeek
+                    site={selectedSite}
+                    onClose={() => handleSelect(null)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <StatsHeadline sites={landUseFilteredSites} />
+                  </div>
+                )
+              }
+            >
+              {selectedSite ? (
+                <SiteDetailBody site={selectedSite} />
+              ) : (
+                <StatsBreakdown
+                  sites={landUseFilteredSites}
+                  totalForestHa={totalForestHa}
+                  colorMode={colorMode}
+                />
+              )}
+            </MobileSheet>
           )}
         </div>
       )}
