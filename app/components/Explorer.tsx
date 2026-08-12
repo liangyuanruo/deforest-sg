@@ -12,7 +12,7 @@ import { SearchBox } from "@/components/SearchBox";
 import { ShareButton } from "@/components/ShareButton";
 import { SiteDetail, SiteDetailBody, SiteSheetPeek } from "@/components/SiteDetail";
 import { StatsBreakdown, StatsHeadline, StatsPanel } from "@/components/StatsPanel";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle, useTheme } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -69,6 +69,9 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
     zones: false,
   });
   const [colorMode, setColorMode] = useState<ColorMode>("status");
+  // Drives the Street basemap's day/night treatment; tracks the app theme so the
+  // map follows the sun/moon toggle without its own control.
+  const { theme } = useTheme();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   // A deep link (`/forest/<id>`) lands with the sheet already raised to half so
@@ -273,6 +276,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
               layers={layers}
               colorMode={colorMode}
               onColorModeChange={setColorMode}
+              theme={theme}
             />
           ) : (
             <div className="h-full w-full animate-pulse bg-muted" />

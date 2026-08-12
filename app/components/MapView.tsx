@@ -6,6 +6,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatHa } from "@/lib/format";
 import { formatGprRange, GPR_CODE_LABEL, parseGpr } from "@/lib/gpr";
+import type { Theme } from "@/components/ThemeToggle";
 import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
 import {
   colorForLandUse,
@@ -40,6 +41,9 @@ export interface MapViewProps {
   colorMode: ColorMode;
   /** Fired by the on-map "Colour by" toggle. */
   onColorModeChange: (mode: ColorMode) => void;
+  /** App light/dark theme — picks the Street basemap's day vs night treatment.
+   *  Satellite imagery is theme-invariant. */
+  theme: Theme;
   className?: string;
 }
 
@@ -62,8 +66,13 @@ const CAMERA = {
  * style — the Satellite option is a raster style and ignores it — and is
  * re-applied after every setStyle swap back to Standard (a swap resets config to
  * the style's defaults).
+ *
+ * The `show*` flags are theme-invariant (they strip distractions in both modes);
+ * only the colours + `lightPreset` differ for dark, so the dark variant below
+ * spreads this base and overrides just those. This is the light (`day`) config.
  */
 const STANDARD_BASEMAP_CONFIG = {
+  lightPreset: "day",
   colorMotorways: "#e0e0e0",
   colorTrunks: "#e6e6e6",
   colorRoads: "#e0e0e0",
@@ -89,6 +98,39 @@ const STANDARD_BASEMAP_CONFIG = {
   colorWater: "#cfcfcf",
   colorLand: "#f0f0f0",
 };
+
+/**
+ * Dark-mode counterpart, applied when the app is in dark mode so the Street
+ * basemap matches the chrome instead of glaring white. Same distraction-stripping
+ * `show*` flags (spread from the light config); the ground goes near-black, labels
+ * flip to light grey so they read on it, and greenspace becomes a desaturated dark
+ * green — keeping the muted, low-contrast character so the red overlay still leads.
+ * `lightPreset: "night"` shifts Standard's base render dark beneath these overrides.
+ * Satellite is raster imagery with no config, so dark mode leaves it untouched.
+ */
+const STANDARD_BASEMAP_CONFIG_DARK = {
+  ...STANDARD_BASEMAP_CONFIG,
+  lightPreset: "night",
+  colorMotorways: "#3a3a3a",
+  colorTrunks: "#3a3a3a",
+  colorRoads: "#333333",
+  colorPlaceLabels: "#c8c8c8",
+  colorPointOfInterestLabels: "#808080",
+  colorRoadLabels: "#b0b0b0",
+  colorBuildings: "#242424",
+  colorCommercial: "#242424",
+  colorEducation: "#242424",
+  colorMedical: "#242424",
+  colorIndustrial: "#242424",
+  colorGreenspace: "#3d8a5d",
+  colorWater: "#151a1f",
+  colorLand: "#1a1a1a",
+};
+
+/** The Standard `basemap` config for the app's current light/dark theme. */
+function standardBasemapConfig(theme: Theme) {
+  return theme === "dark" ? STANDARD_BASEMAP_CONFIG_DARK : STANDARD_BASEMAP_CONFIG;
+}
 
 const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
 const LYR = {
@@ -210,6 +252,11 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     promoteId: "id",
   });
 
+  // Every data fill is fully emissive so the Standard basemap's lighting model
+  // (notably the dark `night` preset) can't mute it — the overlay reads at its
+  // true colour in both day and night. Harmless on the Satellite raster style,
+  // which has no lighting. Without this, `night` renders the red patches as dark
+  // maroon and the green wash as near-black.
   map.addLayer({
     id: LYR.forestFill,
     type: "fill",
@@ -217,6 +264,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     paint: {
       "fill-color": "#16a34a",
       "fill-opacity": contextFillOpacity(basemap, FOREST_FILL_OPACITY),
+      "fill-emissive-strength": 1,
     },
   });
   map.addLayer({
@@ -229,6 +277,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     paint: {
       "fill-color": landUseFillExpression("lu_desc") as never,
       "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
+      "fill-emissive-strength": 1,
     },
   });
   map.addLayer({
@@ -238,6 +287,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     paint: {
       "fill-color": STATUS_FILL_COLOR as never,
       "fill-opacity": STATUS_FILL_OPACITY as never,
+      "fill-emissive-strength": 1,
     },
   });
 
@@ -332,7 +382,7 @@ export function MapView(props: MapViewProps) {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLES.standard,
-      config: { basemap: STANDARD_BASEMAP_CONFIG },
+      config: { basemap: standardBasemapConfig(propsRef.current.theme) },
       ...CAMERA,
     });
     mapRef.current = map;
@@ -544,6 +594,17 @@ export function MapView(props: MapViewProps) {
     applyColorMode(map, props.colorMode, basemap);
   }, [props.colorMode, basemap]);
 
+  // --- theme: re-tint the Street basemap live ----------------------------
+  // Flipping the app's light/dark just swaps the Standard `basemap` config
+  // (setConfig — no setStyle, no layer rebuild). Satellite has no config to
+  // tint, so it's a no-op there; its effect re-runs on basemap change so the
+  // config lands as soon as the user switches back to Street.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || basemap !== "standard") return;
+    map.setConfig("basemap", standardBasemapConfig(props.theme));
+  }, [props.theme, basemap]);
+
   // --- basemap: swap the base style, then re-install our layers -----------
   // setStyle replaces the whole style, dropping every custom source/layer and
   // all feature-state. The camera is preserved, so the user keeps their view; we
@@ -559,10 +620,10 @@ export function MapView(props: MapViewProps) {
     map.once("style.load", () => {
       const p = propsRef.current;
       // A style swap resets config to the new style's defaults, so re-apply the
-      // Standard basemap treatment. The Satellite raster style has no `basemap`
-      // import to configure, so it's skipped there.
+      // Standard basemap treatment for the current theme. The Satellite raster
+      // style has no `basemap` import to configure, so it's skipped there.
       if (basemap === "standard") {
-        map.setConfig("basemap", STANDARD_BASEMAP_CONFIG);
+        map.setConfig("basemap", standardBasemapConfig(propsRef.current.theme));
       }
       addSourcesAndLayers(map, p, basemap);
       selectedRef.current = p.selectedId;

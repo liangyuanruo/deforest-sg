@@ -22,16 +22,24 @@ export type Theme = "light" | "dark";
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>("light");
 
-  // Sync React state to whatever the pre-paint script decided. Deferred to the
-  // next frame so it is not a synchronous set-state-in-effect (which also keeps
-  // the first client render identical to the server's, avoiding a mismatch).
+  // Sync React state to the `.dark` class on <html> — the source of truth. The
+  // initial read is deferred to the next frame so it isn't a synchronous
+  // set-state-in-effect (which also keeps the first client render identical to
+  // the server's, avoiding a mismatch). A MutationObserver then keeps *every*
+  // hook instance in sync with any later change to the class, whichever instance
+  // (or the pre-paint script) made it — so a toggle from the header button also
+  // updates the map's theme, not just the button's own state.
   useEffect(() => {
-    const id = requestAnimationFrame(() =>
-      setTheme(
-        document.documentElement.classList.contains("dark") ? "dark" : "light",
-      ),
-    );
-    return () => cancelAnimationFrame(id);
+    const el = document.documentElement;
+    const sync = () =>
+      setTheme(el.classList.contains("dark") ? "dark" : "light");
+    const id = requestAnimationFrame(sync);
+    const observer = new MutationObserver(sync);
+    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => {
+      cancelAnimationFrame(id);
+      observer.disconnect();
+    };
   }, []);
 
   const toggle = useCallback(() => {
