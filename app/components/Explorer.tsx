@@ -8,6 +8,7 @@ import { AboutModal, GitHubLink } from "@/components/AboutModal";
 import { FilterPanel } from "@/components/FilterPanel";
 import { HeaderMenu } from "@/components/HeaderMenu";
 import { SearchBox } from "@/components/SearchBox";
+import { ShareButton } from "@/components/ShareButton";
 import { SiteDetail } from "@/components/SiteDetail";
 import { StatsPanel } from "@/components/StatsPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -25,6 +26,7 @@ import {
   fetchThreatened,
 } from "@/lib/data";
 import { filterAndSortSites, landUseOptions } from "@/lib/scoring";
+import { forestPath } from "@/lib/share";
 import type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
 import type {
   DevelopmentZoneFeatureCollection,
@@ -43,7 +45,14 @@ const MapView = dynamic(
   },
 );
 
-export function Explorer() {
+export interface ExplorerProps {
+  /** Forest to preselect on load, from a `/forest/<id>` deep link. The map
+   *  flies to it once data loads; the selection then keeps the address bar in
+   *  sync as the user browses. */
+  initialSelectedId?: number | null;
+}
+
+export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   const [threatened, setThreatened] = useState<ThreatenedFeatureCollection | null>(null);
   const [forest, setForest] = useState<ForestFeatureCollection | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -52,7 +61,7 @@ export function Explorer() {
 
   const [query, setQuery] = useState("");
   const [selectedLandUses, setSelectedLandUses] = useState<string[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelectedId);
   const [layers, setLayers] = useState<MapLayerVisibility>({
     forest: false,
     threatened: true,
@@ -128,6 +137,19 @@ export function Explorer() {
 
   const handleSelect = useCallback((id: number | null) => setSelectedId(id), []);
 
+  // Mirror the selection into the address bar so any forest is deep-linkable by
+  // copying the URL. `replaceState` (not the Next router) keeps this a
+  // client-only path swap — no navigation, no data refetch, no remount — and
+  // drops any inbound `?utm_*` once analytics has recorded it. Works for both
+  // entry routes (`/` and `/forest/<id>`) since they render this same tree.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const path = forestPath(selectedId);
+    if (window.location.pathname + window.location.search !== path) {
+      window.history.replaceState(null, "", path);
+    }
+  }, [selectedId]);
+
   const handleToggleLayer = useCallback((layer: MapLayerKey) => {
     setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
     // Lazy-load the heavy development-zones layer only when first enabled.
@@ -181,8 +203,11 @@ export function Explorer() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:flex-1 sm:justify-end">
-          {/* Desktop: the secondary actions inline. Mobile: same actions folded
-              into the hamburger (both sets are breakpoint-exclusive). */}
+          {/* Share stays visible on every breakpoint — it's a primary action —
+              and shares the selected forest when one is open, else the app.
+              Desktop: the remaining secondary actions inline. Mobile: same
+              actions folded into the hamburger (both sets breakpoint-exclusive). */}
+          <ShareButton site={selectedSite} />
           <ThemeToggle className="hidden sm:inline-flex" />
           <Tooltip>
             <TooltipTrigger

@@ -1,5 +1,28 @@
 import { ImageResponse } from "next/og";
 
+import { formatFootballFields, formatHa, formatPercent } from "@/lib/format";
+import type { ThreatenedProperties } from "@/lib/schema";
+
+/** The TreePine glyph, copied verbatim from `app/icon.svg` so every card
+ *  matches the favicon/header mark. Sized by the caller. */
+function TreeGlyph({ size, stroke }: { size: number; stroke: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z" />
+      <path d="M12 22v-3" />
+    </svg>
+  );
+}
+
 /**
  * Shared social-preview image renderer for `app/opengraph-image.tsx` and
  * `app/twitter-image.tsx`. Both routes need their own static `size` /
@@ -55,6 +78,84 @@ export function renderOgImage() {
           }}
         >
           Which forests will Singapore lose?
+        </div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630,
+    },
+  );
+}
+
+/**
+ * Per-forest social card for `app/forest/[id]/opengraph-image.tsx` and its
+ * `twitter-image.tsx`. Same green identity as the generic card, but the forest
+ * is the headline: its name large, then the figures that carry the story — the
+ * threatened area (with a football-field comparison), the share of the patch on
+ * development-zoned land, and the URA zoning it would become.
+ */
+export function renderForestOgImage(site: ThreatenedProperties) {
+  const area = formatHa(site.area_ha);
+  const fields = formatFootballFields(site.area_ha);
+  const percent = formatPercent(site.threatened_fraction);
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "72px 80px",
+          background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+          color: "#ffffff",
+        }}
+      >
+        {/* Wordmark row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <TreeGlyph size={52} stroke="#ffffff" />
+          <div style={{ display: "flex", fontSize: 34, fontWeight: 700 }}>
+            Deforest SG
+          </div>
+        </div>
+
+        {/* Headline: the forest name */}
+        <div
+          style={{
+            display: "flex",
+            fontSize: 84,
+            fontWeight: 700,
+            lineHeight: 1.05,
+            maxWidth: 1040,
+          }}
+        >
+          {site.label}
+        </div>
+
+        {/* Figures that carry the story */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 40,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.95)",
+            }}
+          >
+            {area} zoned for development · {fields}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 30,
+              color: "rgba(255,255,255,0.82)",
+            }}
+          >
+            {percent} of this patch · would become {site.dominant_lu_desc}
+          </div>
         </div>
       </div>
     ),

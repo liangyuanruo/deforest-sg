@@ -2,6 +2,7 @@
 
 import { Info, Layers, MapPin, Ruler, X } from "lucide-react";
 
+import { ShareButton } from "@/components/ShareButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,15 +59,18 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
             </p>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Close details"
-          className="-mr-1 shrink-0"
-        >
-          <X />
-        </Button>
+        <div className="flex shrink-0 items-center">
+          <ShareButton site={site} size="icon-sm" />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Close details"
+            className="-mr-1"
+          >
+            <X />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 overflow-y-auto px-3 py-3">

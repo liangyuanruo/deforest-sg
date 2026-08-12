@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { productionBaseUrl, SITE_URL } from "@/lib/share";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,13 +15,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://deforest-sg.vercel.app";
 const TITLE = "Deforest SG — Singapore's vulnerable forests";
 const DESCRIPTION =
   "See which Singapore forests the URA Master Plan 2025 zones for development.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  // Resolves relative OG/canonical URLs (including the per-forest `/forest/<id>`
+  // pages) against the real production domain Vercel reports.
+  metadataBase: new URL(productionBaseUrl() ?? SITE_URL),
   applicationName: "Deforest SG",
   title: TITLE,
   description: DESCRIPTION,
