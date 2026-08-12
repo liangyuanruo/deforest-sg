@@ -575,12 +575,12 @@ export function MapView(props: MapViewProps) {
       <div ref={containerRef} className="h-full w-full" />
 
       {/* Map encoding toggles. Desktop: a row near the top-right, kept clear of
-          the corner zoom controls (sm:right-16 leaves a gap). Phones: stacked in
+          the corner zoom controls (sm:right-16 leaves a gap). Phones: a row in
           the top-left corner — the bottom-right corner is now under the detail
           sheet and the top-right holds the zoom/locate controls, leaving the
           top-left as the only free corner. Each control sizes to its content
-          (flex-none) so the stack reads as a tidy pair. */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2 sm:left-auto sm:right-16 sm:flex-row">
+          (flex-none); the pair wraps only on the very narrowest phones. */}
+      <div className="absolute top-3 left-3 z-10 flex flex-row flex-wrap items-start gap-2 sm:left-auto sm:right-16 sm:flex-nowrap">
         <SegmentedControl
           label="Colour by"
           ariaLabel="Colour threatened forest by"
@@ -609,7 +609,7 @@ const COLOR_MODE_OPTIONS: { key: ColorMode; label: string }[] = [
 
 const BASEMAP_OPTIONS: { key: Basemap; label: string }[] = [
   { key: "satellite", label: "Satellite" },
-  { key: "standard", label: "Standard" },
+  { key: "standard", label: "Street" },
 ];
 
 /**
