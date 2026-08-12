@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Deforest SG",
     short_name: "Deforest SG",
     description:
-      "See which Singapore forests the URA Master Plan 2025 zones for development.",
+      "See which Singapore forests are zoned for development under the Master Plan 2025.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

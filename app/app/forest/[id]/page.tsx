@@ -27,7 +27,7 @@ export async function generateMetadata({
   const title = `${site.label} — Deforest SG`;
   const description = `${formatHa(site.area_ha)} of ${site.label} (${formatPercent(
     site.threatened_fraction,
-  )} of the patch) is zoned for development under Singapore's URA Master Plan 2025.`;
+  )} of the patch) is zoned for development under Singapore's Master Plan 2025.`;
 
   // The colocated `opengraph-image.tsx` / `twitter-image.tsx` supply the images;
   // `url` resolves to an absolute canonical link via the layout's metadataBase.

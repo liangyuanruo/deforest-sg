@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 const TITLE = "Deforest SG — Singapore's vulnerable forests";
 const DESCRIPTION =
-  "See which Singapore forests the URA Master Plan 2025 zones for development.";
+  "See which Singapore forests are zoned for development under the Master Plan 2025.";
 
 export const metadata: Metadata = {
   // Resolves relative OG/canonical URLs (including the per-forest `/forest/<id>`

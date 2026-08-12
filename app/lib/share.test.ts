@@ -56,7 +56,7 @@ describe("shareText", () => {
 
   it("falls back to the app-level question with no forest", () => {
     expect(shareText(null)).toBe(
-      "Which forests will Singapore lose under the URA Master Plan 2025?",
+      "Which forests will Singapore lose under the Master Plan 2025?",
     );
   });
 });
