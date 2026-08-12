@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -109,40 +110,44 @@ export function ShareButton({ site, size = "icon", className }: ShareButtonProps
       />
 
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>
-          {label ? "Share this forest" : "Share Deforest SG"}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {canNativeShare && (
-          <DropdownMenuItem onClick={handleNativeShare}>
-            <Share2 />
-            Share…
+        {/* Wrapped in a group so DropdownMenuLabel has its required group
+            context (base-ui throws otherwise). */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            {label ? "Share this forest" : "Share Deforest SG"}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {canNativeShare && (
+            <DropdownMenuItem onClick={handleNativeShare}>
+              <Share2 />
+              Share…
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            render={
+              <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" />
+            }
+          >
+            <MessageCircle />
+            WhatsApp
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem
-          render={
-            <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" />
-          }
-        >
-          <MessageCircle />
-          WhatsApp
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          render={
-            <a href={links.telegram} target="_blank" rel="noopener noreferrer" />
-          }
-        >
-          <Send />
-          Telegram
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={handleCopy}
-          closeOnClick={false}
-          className={cn(copied && "text-primary focus:text-primary")}
-        >
-          {copied ? <Check /> : <LinkIcon />}
-          {copied ? "Link copied" : "Copy link"}
-        </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              <a href={links.telegram} target="_blank" rel="noopener noreferrer" />
+            }
+          >
+            <Send />
+            Telegram
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleCopy}
+            closeOnClick={false}
+            className={cn(copied && "text-primary focus:text-primary")}
+          >
+            {copied ? <Check /> : <LinkIcon />}
+            {copied ? "Link copied" : "Copy link"}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
