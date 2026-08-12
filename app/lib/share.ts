@@ -68,8 +68,8 @@ export function buildShareUrl(
  *  Telegram, and the native share sheet. */
 export function shareText(label: string | null): string {
   return label
-    ? `${label} is among the Singapore forests zoned for development under the Master Plan 2025.`
-    : "Which forests will Singapore lose under the Master Plan 2025?";
+    ? `${label} is among the Singapore forests zoned for development.`
+    : "Which forests will Singapore lose?";
 }
 
 /** WhatsApp share deep-link. `wa.me/?text=` (no phone number) opens the app's
