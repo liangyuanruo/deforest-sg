@@ -307,7 +307,7 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
         if nm:
             return nm
         loc = r["locality"] if isinstance(r["locality"], str) and r["locality"] else "unknown area"
-        return f"Unnamed forest near {loc}"
+        return f"Forest near {loc}"
 
     patches["label"] = patches.apply(make_label, axis=1)
     ctx = patches["name"].apply(context_for_name)
