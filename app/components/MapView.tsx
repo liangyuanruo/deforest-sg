@@ -574,20 +574,20 @@ export function MapView(props: MapViewProps) {
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* Toggles: a single row near the top-right on desktop, kept clear of the
-          zoom controls that sit in the corner (sm:right-16 leaves a gap). On
-          phones the row sits at the bottom-right (the legend is hidden there, so
-          nothing to clear) — raised to bottom-14 to sit above Mapbox's corner
-          attribution button. The two toggles share a compact fixed width equally
-          (flex-1) so they read as a matched pair. */}
-      <div className="absolute right-3 bottom-14 z-10 flex w-[19rem] max-w-[calc(100vw-1.5rem)] items-stretch gap-2 sm:top-3 sm:right-16 sm:bottom-auto sm:w-auto sm:max-w-none sm:items-start">
+      {/* Map encoding toggles. Desktop: a row near the top-right, kept clear of
+          the corner zoom controls (sm:right-16 leaves a gap). Phones: stacked in
+          the top-left corner — the bottom-right corner is now under the detail
+          sheet and the top-right holds the zoom/locate controls, leaving the
+          top-left as the only free corner. Each control sizes to its content
+          (flex-none) so the stack reads as a tidy pair. */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2 sm:left-auto sm:right-16 sm:flex-row">
         <SegmentedControl
           label="Colour by"
           ariaLabel="Colour threatened forest by"
           options={COLOR_MODE_OPTIONS}
           value={props.colorMode}
           onChange={props.onColorModeChange}
-          className="flex-1 sm:flex-none"
+          className="flex-none"
         />
         <SegmentedControl
           label="Basemap"
@@ -595,7 +595,7 @@ export function MapView(props: MapViewProps) {
           options={BASEMAP_OPTIONS}
           value={basemap}
           onChange={setBasemap}
-          className="flex-1 sm:flex-none"
+          className="flex-none"
         />
       </div>
     </div>
