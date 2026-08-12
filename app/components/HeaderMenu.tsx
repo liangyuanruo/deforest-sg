@@ -43,7 +43,7 @@ export function HeaderMenu({
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={toggle}>
           {dark ? <Sun /> : <Moon />}
           {dark ? "Light mode" : "Dark mode"}

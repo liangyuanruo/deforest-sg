@@ -95,7 +95,7 @@ export function ShareButton({ site, size = "icon", className }: ShareButtonProps
       {/* A flat list of items only — deliberately no DropdownMenuLabel, which
           (base-ui's Menu.GroupLabel) requires a surrounding Menu.Group and
           throws "MenuGroupContext is missing" otherwise. Mirrors HeaderMenu. */}
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end">
         <DropdownMenuItem
           render={
             <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" />
