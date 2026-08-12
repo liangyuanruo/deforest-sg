@@ -43,11 +43,10 @@ export interface ShareButtonProps {
 }
 
 /**
- * Share control: a dropdown offering WhatsApp, Telegram, and Copy-link, plus —
- * on devices that support it — the native share sheet (which is how Instagram
- * is reached, since Instagram has no link-prefill URL). Every link is UTM-tagged
- * per channel and points at `/forest/<id>` when a forest is selected (so the
- * recipient lands on that forest, with its own social preview) or `/` otherwise.
+ * Share control: a dropdown offering WhatsApp, Telegram, and Copy-link. Every
+ * link is UTM-tagged per channel and points at `/forest/<id>` when a forest is
+ * selected (so the recipient lands on that forest, with its own social preview)
+ * or `/` otherwise.
  */
 export function ShareButton({ site, size = "icon", className }: ShareButtonProps) {
   const id = site?.id ?? null;
@@ -61,10 +60,6 @@ export function ShareButton({ site, size = "icon", className }: ShareButtonProps
     () => productionBaseUrl() ?? window.location.origin,
     productionBaseUrl() ?? SITE_URL,
   );
-  const canNativeShare = useBrowserValue(
-    () => typeof navigator !== "undefined" && !!navigator.share,
-    false,
-  );
   const [copied, setCopied] = useState(false);
 
   const links = useMemo(() => {
@@ -72,17 +67,8 @@ export function ShareButton({ site, size = "icon", className }: ShareButtonProps
       whatsapp: whatsappHref(buildShareUrl(origin, id, "whatsapp"), text),
       telegram: telegramHref(buildShareUrl(origin, id, "telegram"), text),
       copy: buildShareUrl(origin, id, "copy"),
-      native: buildShareUrl(origin, id, "native"),
     };
   }, [origin, id, text]);
-
-  async function handleNativeShare() {
-    try {
-      await navigator.share({ title: "Deforest SG", text, url: links.native });
-    } catch {
-      // The user dismissing the share sheet rejects the promise; ignore it.
-    }
-  }
 
   async function handleCopy() {
     try {
@@ -117,12 +103,6 @@ export function ShareButton({ site, size = "icon", className }: ShareButtonProps
             {label ? "Share this forest" : "Share Deforest SG"}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {canNativeShare && (
-            <DropdownMenuItem onClick={handleNativeShare}>
-              <Share2 />
-              Share…
-            </DropdownMenuItem>
-          )}
           <DropdownMenuItem
             render={
               <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" />
