@@ -174,10 +174,17 @@ export function StatsBreakdown({
   totalForestHa,
   colorMode,
   hideFigures = false,
+  hideStatusKey = false,
 }: Omit<StatsPanelProps, "className"> & {
   /** Suppress the "% of mapped forest" / "sites" figures — set by the mobile
    *  sheet, whose peek headline already shows them, to avoid repeating them. */
   hideFigures?: boolean;
+  /** Suppress the "Threatened forest" red map-key row — set by the mobile sheet.
+   *  That row appears only in "status" mode, so toggling colour mode would change
+   *  the sheet's content height and make the draggable sheet re-measure and
+   *  re-animate (a visible flicker). Omitting it keeps the sheet height stable
+   *  across the toggle; the peek headline already conveys the threatened layer. */
+  hideStatusKey?: boolean;
 }) {
   const { threatenedHa, siteCount, fraction, slices } = useStatsAgg(
     sites,
@@ -198,7 +205,7 @@ export function StatsBreakdown({
               mode, where the patches take the zoning colours the breakdown below
               already keys. Sits in its own bordered zone (square swatch, unlike
               the breakdown's round dots) so it doesn't read as a breakdown item. */}
-          {colorMode === "status" && (
+          {colorMode === "status" && !hideStatusKey && (
             <div className="flex items-center gap-2 border-t border-border/60 pt-2.5 text-[11px]">
               <span
                 aria-hidden

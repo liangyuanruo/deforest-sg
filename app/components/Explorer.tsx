@@ -330,6 +330,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                   totalForestHa={totalForestHa}
                   colorMode={colorMode}
                   hideFigures
+                  hideStatusKey
                 />
               )}
             </MobileSheet>

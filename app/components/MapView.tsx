@@ -581,12 +581,15 @@ export function MapView(props: MapViewProps) {
           top-left as the only free corner. Each control sizes to its content
           (flex-none); the pair wraps only on the very narrowest phones. */}
       <div className="absolute top-3 left-3 z-10 flex flex-row flex-wrap items-start gap-2 sm:left-auto sm:right-16 sm:flex-nowrap">
-        <SegmentedControl
-          label="Colour by"
-          ariaLabel="Colour threatened forest by"
-          options={COLOR_MODE_OPTIONS}
-          value={props.colorMode}
-          onChange={props.onColorModeChange}
+        {/* Colour mode is a plain on/off: off is the default alarm red ("status"),
+            on recolours each patch by its URA zoning. A single labelled switch
+            (rather than a two-option toggle with an opaque "Status" label) is
+            smaller and says exactly what turning it on does. */}
+        <SwitchControl
+          label="URA zoning"
+          ariaLabel="Colour threatened forest by URA zoning"
+          checked={props.colorMode === "landuse"}
+          onChange={(on) => props.onColorModeChange(on ? "landuse" : "status")}
           className="flex-none"
         />
         <SegmentedControl
@@ -601,11 +604,6 @@ export function MapView(props: MapViewProps) {
     </div>
   );
 }
-
-const COLOR_MODE_OPTIONS: { key: ColorMode; label: string }[] = [
-  { key: "status", label: "Status" },
-  { key: "landuse", label: "URA zoning" },
-];
 
 const BASEMAP_OPTIONS: { key: Basemap; label: string }[] = [
   { key: "satellite", label: "Satellite" },
@@ -664,6 +662,58 @@ function SegmentedControl<T extends string>({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * On-map on/off switch, sharing the segmented control's card chrome so the two sit
+ * flush in the same cluster. The label always shows (unlike the segmented control's
+ * sm-only label) because here the label *is* the meaning — it names what the switch
+ * turns on. Interactive, so it opts back into pointer events in the passive overlay.
+ */
+function SwitchControl({
+  label,
+  ariaLabel,
+  checked,
+  onChange,
+  className,
+}: {
+  label: string;
+  ariaLabel: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "pointer-events-auto flex items-center gap-2 rounded-lg border border-border/60 bg-card/85 py-2 pr-2 pl-2.5 shadow-sm backdrop-blur",
+        className,
+      )}
+    >
+      <span className="text-[11px] leading-none font-medium whitespace-nowrap text-foreground">
+        {label}
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
+          checked ? "bg-primary" : "bg-muted-foreground/30",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block size-3 rounded-full bg-white shadow-sm transition-transform",
+            checked ? "translate-x-3.5" : "translate-x-0.5",
+          )}
+        />
+      </span>
+    </button>
   );
 }
 
