@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T14:44:34.217580+00:00",
+  "generated_at": "2026-08-12T14:59:17.411766+00:00",
   "provenance": {
     "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) \u2014 G_MP25_LANDUSE_PL",
     "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
@@ -124,6 +124,14 @@
   ],
   "named_forests_threatened": [
     {
+      "name": "Springleaf Forest",
+      "threatened_ha": 107.76
+    },
+    {
+      "name": "Tagore Forest",
+      "threatened_ha": 100.3
+    },
+    {
       "name": "Kampong Teban Forest",
       "threatened_ha": 71.72
     },
@@ -140,16 +148,40 @@
       "threatened_ha": 34.92
     },
     {
+      "name": "Adam Drive Forest",
+      "threatened_ha": 33.77
+    },
+    {
+      "name": "Ulu Sembawang Forest",
+      "threatened_ha": 25.08
+    },
+    {
       "name": "Maju Forest",
       "threatened_ha": 21.69
+    },
+    {
+      "name": "Loyang Mangroves",
+      "threatened_ha": 19.91
     },
     {
       "name": "Dover Forest West",
       "threatened_ha": 16.2
     },
     {
+      "name": "Bukit Brown Forest",
+      "threatened_ha": 9.26
+    },
+    {
+      "name": "Bahar Forest",
+      "threatened_ha": 8.38
+    },
+    {
       "name": "Kuala Loyang (Old Tampines Road) Forest",
       "threatened_ha": 8.02
+    },
+    {
+      "name": "Alexandra Woodland",
+      "threatened_ha": 3.61
     },
     {
       "name": "Lorong Banir Forest",
@@ -227,8 +259,8 @@
     },
     {
       "rank": 3,
-      "label": "Unnamed forest near Tagore",
-      "name": null,
+      "label": "Tagore Forest",
+      "name": "Tagore Forest",
       "locality": "Tagore",
       "area_ha": 100.3,
       "forest_area_ha": 100.43,
@@ -353,8 +385,8 @@
     },
     {
       "rank": 10,
-      "label": "Unnamed forest near Springleaf",
-      "name": null,
+      "label": "Springleaf Forest",
+      "name": "Springleaf Forest",
       "locality": "Springleaf",
       "area_ha": 59.53,
       "forest_area_ha": 60.85,
@@ -659,8 +691,8 @@
     },
     {
       "rank": 27,
-      "label": "Unnamed forest near Springleaf",
-      "name": null,
+      "label": "Springleaf Forest",
+      "name": "Springleaf Forest",
       "locality": "Springleaf",
       "area_ha": 23.84,
       "forest_area_ha": 26.3,
@@ -713,8 +745,8 @@
     },
     {
       "rank": 30,
-      "label": "Unnamed forest near The Greenwood",
-      "name": null,
+      "label": "Adam Drive Forest",
+      "name": "Adam Drive Forest",
       "locality": "The Greenwood",
       "area_ha": 22.76,
       "forest_area_ha": 23.37,
@@ -803,8 +835,8 @@
     },
     {
       "rank": 35,
-      "label": "Unnamed forest near Loyang West",
-      "name": null,
+      "label": "Loyang Mangroves",
+      "name": "Loyang Mangroves",
       "locality": "Loyang West",
       "area_ha": 19.91,
       "forest_area_ha": 22.29,

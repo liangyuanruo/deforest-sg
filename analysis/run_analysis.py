@@ -35,7 +35,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
 
-from site_context import context_for_name
+from site_context import context_for_name, name_override_for_osm_id
 
 # --------------------------------------------------------------------------- #
 # Paths & config
@@ -216,6 +216,15 @@ def load_forest(mask) -> gpd.GeoDataFrame:
     forest = forest[forest.geometry.geom_type.isin(["Polygon", "MultiPolygon"])].copy()
     forest = forest.dissolve(by="osm_id", aggfunc={"name": "first", "source_layer": "first"}).reset_index()
     forest["forest_area_ha"] = forest.geometry.area / 1e4
+    # Apply curated display names to polygons OSM never named (exact osm_id, not a
+    # bbox; see site_context.FOREST_NAME_OVERRIDES). Only fills where OSM is blank,
+    # so real OSM names (incl. the validated "Maju Forest") are never overwritten.
+    forest["name"] = forest.apply(
+        lambda r: r["name"]
+        if isinstance(r["name"], str) and r["name"].strip()
+        else name_override_for_osm_id(r["osm_id"]),
+        axis=1,
+    )
     return forest
 
 
