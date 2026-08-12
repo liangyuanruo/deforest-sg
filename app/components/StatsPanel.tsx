@@ -133,25 +133,32 @@ export function StatsHeadline({
   const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
   const fraction =
     totalForestHa && totalForestHa > 0 ? threatenedHa / totalForestHa : 0;
+  const headline = (
+    <span className="flex min-w-0 flex-col leading-tight">
+      <span className="text-base font-semibold tabular-nums text-foreground">
+        {formatHa(threatenedHa)}
+      </span>
+      <span className="text-[11px] text-muted-foreground">
+        forest under threat
+      </span>
+      <span className="text-[11px] text-muted-foreground/80">
+        {formatFootballFields(threatenedHa)}
+      </span>
+    </span>
+  );
   return (
     <>
       <TreePine className="size-4 shrink-0 text-primary" />
-      <span className="flex min-w-0 flex-col leading-tight">
-        <span className="text-base font-semibold tabular-nums text-foreground">
-          {formatHa(threatenedHa)}
-        </span>
-        <span className="text-[11px] text-muted-foreground">
-          forest under threat
-        </span>
-        <span className="text-[11px] text-muted-foreground/80">
-          {formatFootballFields(threatenedHa)}
-        </span>
-      </span>
-      {totalForestHa !== undefined && (
-        <span className="ml-auto flex shrink-0 items-center gap-4 pr-1">
+      {totalForestHa === undefined ? (
+        headline
+      ) : (
+        // Mobile peek: the headline and the two figures split the row into equal
+        // thirds so nothing hugs the right edge with a gap in the middle.
+        <div className="grid flex-1 grid-cols-3 items-center gap-2">
+          {headline}
           <Figure value={formatPercent(fraction)} label="of mapped forest" />
           <Figure value={formatNumber(sites.length)} label="sites" />
-        </span>
+        </div>
       )}
     </>
   );
