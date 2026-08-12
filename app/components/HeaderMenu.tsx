@@ -51,7 +51,7 @@ export function HeaderMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onOpenAbout}>
           <Info />
-          About this project
+          About
         </DropdownMenuItem>
         <DropdownMenuItem
           render={
@@ -64,7 +64,7 @@ export function HeaderMenu({
           }
         >
           <GithubMark />
-          Source on GitHub
+          GitHub
           <ExternalLink className="ml-auto" />
         </DropdownMenuItem>
       </DropdownMenuContent>
