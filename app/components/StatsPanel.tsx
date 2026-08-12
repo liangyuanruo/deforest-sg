@@ -8,7 +8,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatHa, formatNumber, formatPercent } from "@/lib/format";
+import {
+  formatFootballFields,
+  formatHa,
+  formatNumber,
+  formatPercent,
+} from "@/lib/format";
 import {
   aggregateByLandUse,
   colorForLandUse,
@@ -89,6 +94,9 @@ export function StatsPanel({
           </span>
           <span className="text-[11px] text-muted-foreground">
             forest under threat
+          </span>
+          <span className="text-[11px] text-muted-foreground/80">
+            {formatFootballFields(threatenedHa)}
           </span>
         </span>
         <ChevronDown

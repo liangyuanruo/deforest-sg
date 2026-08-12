@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatHa, formatPercent } from "@/lib/format";
+import { formatFootballFields, formatHa, formatPercent } from "@/lib/format";
 import {
   describeGprCode,
   formatGprRange,
@@ -91,6 +91,9 @@ export function SiteDetail({ site, onClose, className }: SiteDetailProps) {
           </div>
           <p className="text-xs text-muted-foreground">
             {percent} of {formatHa(site.forest_area_ha)} total patch
+          </p>
+          <p className="text-xs text-muted-foreground/80">
+            {formatFootballFields(site.area_ha)}
           </p>
         </div>
 
