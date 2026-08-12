@@ -91,11 +91,8 @@ export function SiteSheetPeek({
           {site.label}
         </h2>
         <p className="truncate text-xs text-muted-foreground">
-          {formatHa(site.area_ha)} vulnerable
+          {formatHa(site.area_ha)} vulnerable · {formatFootballFields(site.area_ha)}
           {site.locality ? ` · ${site.locality}` : ""}
-        </p>
-        <p className="truncate text-xs text-muted-foreground/80">
-          {formatFootballFields(site.area_ha)}
         </p>
       </div>
       <div data-sheet-no-drag className="flex shrink-0 items-center">
@@ -122,9 +119,13 @@ export function SiteSheetPeek({
 export function SiteDetailBody({
   site,
   className,
+  showFootballFields = true,
 }: {
   site: ThreatenedProperties;
   className?: string;
+  /** The mobile sheet's peek already carries the football-field comparison, so
+   *  it suppresses the body's copy to avoid showing the same figure twice. */
+  showFootballFields?: boolean;
 }) {
   const percent = formatPercent(site.threatened_fraction);
   const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
@@ -157,9 +158,11 @@ export function SiteDetailBody({
           <p className="text-xs text-muted-foreground">
             {percent} of {formatHa(site.forest_area_ha)} total patch
           </p>
-          <p className="text-xs text-muted-foreground/80">
-            {formatFootballFields(site.area_ha)}
-          </p>
+          {showFootballFields && (
+            <p className="text-xs text-muted-foreground/80">
+              {formatFootballFields(site.area_ha)}
+            </p>
+          )}
         </div>
 
         <dl className="flex flex-col gap-2 text-xs">

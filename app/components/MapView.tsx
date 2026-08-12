@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
-import { formatHa } from "@/lib/format";
+import { formatFootballFields, formatHa } from "@/lib/format";
 import { formatGprRange, GPR_CODE_LABEL, parseGpr } from "@/lib/gpr";
 import type { Theme } from "@/components/ThemeToggle";
 import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
@@ -461,6 +461,12 @@ export function MapView(props: MapViewProps) {
         } | null;
         const label = escapeHtml(pr?.label ?? "Forest patch");
         const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
+        // A football-field comparison makes the hectare figure picturable — the
+        // same secondary line the site card carries.
+        const fields =
+          typeof pr?.area_ha === "number"
+            ? formatFootballFields(pr.area_ha)
+            : "";
         const lu = pr?.dominant_lu_desc;
         const luRow = lu
           ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
@@ -490,7 +496,11 @@ export function MapView(props: MapViewProps) {
           .setLngLat(e.lngLat)
           .setHTML(
             `<div class="deforest-popup__body"><div class="deforest-popup__title">${label}</div>` +
-              (area ? `<div class="deforest-popup__meta">${area} vulnerable</div>` : "") +
+              (area
+                ? `<div class="deforest-popup__meta">${area} vulnerable${
+                    fields ? ` · ${escapeHtml(fields)}` : ""
+                  }</div>`
+                : "") +
               luRow +
               descRow +
               gprRow +

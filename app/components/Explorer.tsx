@@ -330,7 +330,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
               }
             >
               {selectedSite ? (
-                <SiteDetailBody site={selectedSite} />
+                <SiteDetailBody site={selectedSite} showFootballFields={false} />
               ) : (
                 <StatsBreakdown
                   sites={landUseFilteredSites}
