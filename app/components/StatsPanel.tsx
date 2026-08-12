@@ -117,9 +117,22 @@ export function StatsPanel({
  * The always-visible headline: total hectares under threat, in words + football
  * fields. Presentational (no button/chevron) so it can sit inside the desktop
  * card's toggle button or the mobile sheet's peek header alike.
+ *
+ * Pass `totalForestHa` to also show the "% of mapped forest" and "sites" figures
+ * inline on the right — used by the mobile sheet's peek so those numbers stay
+ * visible even when the sheet is dragged down (the desktop card omits it, keeping
+ * those figures in its expandable breakdown instead).
  */
-export function StatsHeadline({ sites }: { sites: ThreatenedProperties[] }) {
+export function StatsHeadline({
+  sites,
+  totalForestHa,
+}: {
+  sites: ThreatenedProperties[];
+  totalForestHa?: number;
+}) {
   const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
+  const fraction =
+    totalForestHa && totalForestHa > 0 ? threatenedHa / totalForestHa : 0;
   return (
     <>
       <TreePine className="size-4 shrink-0 text-primary" />
@@ -134,6 +147,12 @@ export function StatsHeadline({ sites }: { sites: ThreatenedProperties[] }) {
           {formatFootballFields(threatenedHa)}
         </span>
       </span>
+      {totalForestHa !== undefined && (
+        <span className="ml-auto flex shrink-0 items-center gap-4 pr-1">
+          <Figure value={formatPercent(fraction)} label="of mapped forest" />
+          <Figure value={formatNumber(sites.length)} label="sites" />
+        </span>
+      )}
     </>
   );
 }
@@ -147,7 +166,12 @@ export function StatsBreakdown({
   sites,
   totalForestHa,
   colorMode,
-}: Omit<StatsPanelProps, "className">) {
+  hideFigures = false,
+}: Omit<StatsPanelProps, "className"> & {
+  /** Suppress the "% of mapped forest" / "sites" figures — set by the mobile
+   *  sheet, whose peek headline already shows them, to avoid repeating them. */
+  hideFigures?: boolean;
+}) {
   const { threatenedHa, siteCount, fraction, slices } = useStatsAgg(
     sites,
     totalForestHa,
@@ -155,10 +179,12 @@ export function StatsBreakdown({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="grid grid-cols-2 gap-2">
-            <Figure value={formatPercent(fraction)} label="of mapped forest" />
-            <Figure value={formatNumber(siteCount)} label="sites" />
-          </div>
+      {!hideFigures && (
+        <div className="grid grid-cols-2 gap-2">
+          <Figure value={formatPercent(fraction)} label="of mapped forest" />
+          <Figure value={formatNumber(siteCount)} label="sites" />
+        </div>
+      )}
 
           {/* Map key. In "status" mode every threatened patch is the alarm red,
               so this row is what the red on the map means. Omitted in "landuse"

@@ -314,7 +314,10 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <StatsHeadline sites={landUseFilteredSites} />
+                    <StatsHeadline
+                      sites={landUseFilteredSites}
+                      totalForestHa={totalForestHa}
+                    />
                   </div>
                 )
               }
@@ -326,6 +329,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                   sites={landUseFilteredSites}
                   totalForestHa={totalForestHa}
                   colorMode={colorMode}
+                  hideFigures
                 />
               )}
             </MobileSheet>
