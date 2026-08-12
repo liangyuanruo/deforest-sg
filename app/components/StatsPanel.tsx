@@ -38,7 +38,7 @@ export interface StatsPanelProps {
   totalForestHa: number;
   /**
    * How the threatened layer is coloured on the map. In "status" mode every patch
-   * is the alarm red, so the panel shows a "Threatened forest" red key row; in
+   * is the alarm red, so the panel shows a "Vulnerable forest" red key row; in
    * "landuse" mode the patches take their zoning colours, which the breakdown
    * below already keys, so the red row is omitted.
    */
@@ -139,7 +139,7 @@ export function StatsHeadline({
         {formatHa(threatenedHa)}
       </span>
       <span className="text-[11px] text-muted-foreground">
-        forest under threat
+        of vulnerable forests
       </span>
       <span className="text-[11px] text-muted-foreground/80">
         {formatFootballFields(threatenedHa)}
@@ -179,7 +179,7 @@ export function StatsBreakdown({
   /** Suppress the "% of mapped forest" / "sites" figures — set by the mobile
    *  sheet, whose peek headline already shows them, to avoid repeating them. */
   hideFigures?: boolean;
-  /** Suppress the "Threatened forest" red map-key row — set by the mobile sheet.
+  /** Suppress the "Vulnerable forest" red map-key row — set by the mobile sheet.
    *  That row appears only in "status" mode, so toggling colour mode would change
    *  the sheet's content height and make the draggable sheet re-measure and
    *  re-animate (a visible flicker). Omitting it keeps the sheet height stable

@@ -490,7 +490,7 @@ export function MapView(props: MapViewProps) {
           .setLngLat(e.lngLat)
           .setHTML(
             `<div class="deforest-popup__body"><div class="deforest-popup__title">${label}</div>` +
-              (area ? `<div class="deforest-popup__meta">${area} under threat</div>` : "") +
+              (area ? `<div class="deforest-popup__meta">${area} vulnerable</div>` : "") +
               luRow +
               descRow +
               gprRow +
@@ -648,7 +648,7 @@ export function MapView(props: MapViewProps) {
             smaller and says exactly what turning it on does. */}
         <SwitchControl
           label="URA zoning"
-          ariaLabel="Colour threatened forest by URA zoning"
+          ariaLabel="Colour vulnerable forest by URA zoning"
           checked={props.colorMode === "landuse"}
           onChange={(on) => props.onColorModeChange(on ? "landuse" : "status")}
           className="flex-none"

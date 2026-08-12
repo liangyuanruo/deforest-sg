@@ -162,7 +162,7 @@ export function AboutModal({
           <section className="space-y-2">
             <h3 className="font-semibold text-foreground">How to read it</h3>
             <p>
-              The <span className="text-foreground">threatened area</span> of a
+              The <span className="text-foreground">vulnerable area</span> of a
               patch is only the part that falls on development-zoned land — the
               geometric overlap between the mapped forest and the Master Plan
               zone, measured in metres (SVY21), not the whole forest. A forest

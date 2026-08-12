@@ -32,11 +32,11 @@ export interface MapLayerMeta {
 export const MAP_LAYERS: MapLayerMeta[] = [
   {
     key: "threatened",
-    label: "Threatened forest",
+    label: "Vulnerable forest",
     swatch: "#dc2626",
     description: "Where the two source layers overlap",
     role: "result",
-    shortLabel: "threatened forest",
+    shortLabel: "vulnerable forest",
   },
   {
     key: "forest",

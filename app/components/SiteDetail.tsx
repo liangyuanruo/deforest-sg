@@ -91,7 +91,7 @@ export function SiteSheetPeek({
           {site.label}
         </h2>
         <p className="truncate text-xs text-muted-foreground">
-          {formatHa(site.area_ha)} under threat
+          {formatHa(site.area_ha)} vulnerable
           {site.locality ? ` · ${site.locality}` : ""}
         </p>
         <p className="truncate text-xs text-muted-foreground/80">
@@ -139,7 +139,7 @@ export function SiteDetailBody({
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Ruler className="size-3.5" />
-              Under threat
+              Vulnerable area
             </span>
             <Badge variant="secondary" className="tabular-nums">
               {formatHa(site.area_ha)}
