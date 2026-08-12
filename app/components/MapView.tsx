@@ -273,7 +273,7 @@ function flyToSelected(
   map.flyTo({
     center: [feature.properties.centroid_lon, feature.properties.centroid_lat],
     zoom: Math.max(map.getZoom(), 13.5),
-    duration: 900,
+    duration: 2000,
     essential: true,
   });
 }
