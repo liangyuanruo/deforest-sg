@@ -258,8 +258,15 @@ const LOST_FILL: Record<Theme, { base: string; selected: string }> = {
   dark: { base: "#f4f4f5", selected: "#ffffff" },
   light: { base: "#3f3f46", selected: "#18181b" },
 };
-/** Theme-driven scar colour as a feature-state `selected`-aware expression. */
-function lostFillColor(theme: Theme): unknown {
+/**
+ * The already-cleared fill's colour. In "landuse" mode it paints each scar its
+ * URA zoning colour (the dominant land use that replaced the forest) — matching
+ * the threatened layer, so the whole map recolours to zoning together; colour
+ * follows the entity, so selection reads via opacity there, not a recolour. In
+ * "status" mode it's the theme-flipped scar neutral, `selected`-aware.
+ */
+function lostFillColor(theme: Theme, mode: ColorMode): unknown {
+  if (mode === "landuse") return landUseFillExpression("dominant_lu_desc");
   const c = LOST_FILL[theme];
   return ["case", SELECTED, c.selected, c.base];
 }
@@ -279,7 +286,12 @@ function contextFillOpacity(basemap: Basemap, satelliteOpacity: number): number 
   return basemap === "standard" ? SOLID_FILL_OPACITY : satelliteOpacity;
 }
 
-/** Push the paint for the active colour mode onto the threatened layer. */
+/**
+ * Push the paint for the active colour mode onto the threatened layer. The
+ * already-cleared scars recolour to their URA zoning in "landuse" mode too, but
+ * that's owned by the theme effect (keyed on theme + mode) so the scar-neutral
+ * re-tint and the zoning recolour share one code path.
+ */
 function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
   const isLandUse = mode === "landuse";
   map.setPaintProperty(
@@ -373,7 +385,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     type: "fill",
     source: SRC.lost,
     paint: {
-      "fill-color": lostFillColor(p.theme) as never,
+      "fill-color": lostFillColor(p.theme, p.colorMode) as never,
       "fill-opacity": lostFillOpacity(basemap) as never,
       "fill-emissive-strength": 1,
     },
@@ -795,17 +807,20 @@ export function MapView(props: MapViewProps) {
   }, [props.theme, basemap]);
 
   // --- theme: recolour the already-cleared fill live ---------------------
-  // The lost-forest fill flips near-white (dark app theme) / dark grey (light) so
-  // it stays a visible "scar" in both. A plain setPaintProperty — no style rebuild.
+  // In "status" mode the lost-forest fill flips near-white (dark app theme) /
+  // dark grey (light) so it stays a visible "scar" in both. In "landuse" mode the
+  // scar wears its URA zoning colour (theme-independent), so this is a no-op there
+  // — passing the mode keeps a theme flip from clobbering the zoning colours. A
+  // plain setPaintProperty — no style rebuild.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     map.setPaintProperty(
       LYR.lostFill,
       "fill-color",
-      lostFillColor(props.theme) as never,
+      lostFillColor(props.theme, props.colorMode) as never,
     );
-  }, [props.theme]);
+  }, [props.theme, props.colorMode]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
   // setStyle replaces the whole style, dropping every custom source/layer and
