@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { cache } from "react";
 
 import {
+  DeforestedFeatureCollectionSchema,
   ThreatenedFeatureCollectionSchema,
+  type DeforestedProperties,
   type ThreatenedProperties,
 } from "@/lib/schema";
 
@@ -19,18 +21,19 @@ import {
  * (see the repo's CLAUDE.md), so it is guaranteed present under `process.cwd()`
  * when these functions run. `results/` remains the single source of truth.
  */
-const DATA_PATH = join(
-  process.cwd(),
-  "public",
-  "data",
-  "threatened_forests.geojson",
-);
+const dataPath = (file: string) => join(process.cwd(), "public", "data", file);
 
 /** Parse the collection once per server lifetime (React `cache` dedupes across
  *  the page, metadata, and image renders of the same request/build). */
 const loadForests = cache(async (): Promise<ThreatenedProperties[]> => {
-  const raw = await readFile(DATA_PATH, "utf8");
+  const raw = await readFile(dataPath("threatened_forests.geojson"), "utf8");
   const parsed = ThreatenedFeatureCollectionSchema.parse(JSON.parse(raw));
+  return parsed.features.map((f) => f.properties);
+});
+
+const loadCleared = cache(async (): Promise<DeforestedProperties[]> => {
+  const raw = await readFile(dataPath("deforested.geojson"), "utf8");
+  const parsed = DeforestedFeatureCollectionSchema.parse(JSON.parse(raw));
   return parsed.features.map((f) => f.properties);
 });
 
@@ -40,11 +43,37 @@ export async function getForestIds(): Promise<number[]> {
   return forests.map((f) => f.id);
 }
 
-/** The properties for one forest, or `null` if the id isn't a known patch. */
+/**
+ * Every `/forest/<id>` param to prerender — the threatened patches' numeric ids
+ * plus the already-cleared forests' UUIDs, all as strings. Both id families share
+ * the one dynamic route (numeric vs UUID never collide).
+ */
+export async function getForestPathIds(): Promise<string[]> {
+  const [forests, cleared] = await Promise.all([loadForests(), loadCleared()]);
+  return [...forests.map((f) => String(f.id)), ...cleared.map((f) => f.uid)];
+}
+
+/** The properties for one threatened forest, or `null` if the numeric id isn't a
+ *  known patch. */
 export async function getForestById(
   id: number,
 ): Promise<ThreatenedProperties | null> {
   if (!Number.isFinite(id)) return null;
   const forests = await loadForests();
   return forests.find((f) => f.id === id) ?? null;
+}
+
+/** The properties for one already-cleared forest by its UUID, or `null`. */
+export async function getClearedByUid(
+  uid: string,
+): Promise<DeforestedProperties | null> {
+  const cleared = await loadCleared();
+  return cleared.find((f) => f.uid === uid) ?? null;
+}
+
+/** True when a `/forest/[id]` param is a threatened patch's numeric id (digits
+ *  only); a UUID (with hyphens/letters) is an already-cleared forest. Used by the
+ *  route to pick which lookup + render path to take. */
+export function isThreatenedIdParam(id: string): boolean {
+  return /^\d+$/.test(id);
 }

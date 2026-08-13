@@ -100,6 +100,10 @@ export const DevelopmentZoneFeatureCollectionSchema = z.object({
 
 export const DeforestedPropertiesSchema = z.object({
   id: z.number().int(),
+  /** Stable UUID (from the curated input's OSM-style `@id`) — the share/deep-link
+   *  identifier the app routes on (`/forest/<uid>`), disjoint from the threatened
+   *  layer's numeric ids so both can share the one `/forest/[id]` route. */
+  uid: z.string(),
   name: z.string(),
   area_ha: z.number(),
   dominant_lu_desc: z.string().nullable(),

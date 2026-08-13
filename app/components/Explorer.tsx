@@ -10,7 +10,9 @@ import { HeaderMenu } from "@/components/HeaderMenu";
 import { MobileSheet, type SheetSnap } from "@/components/MobileSheet";
 import { SearchBox } from "@/components/SearchBox";
 import { ShareButton } from "@/components/ShareButton";
+import { LostDetail, LostDetailBody, LostSheetPeek } from "@/components/LostDetail";
 import { SiteDetail, SiteDetailBody, SiteSheetPeek } from "@/components/SiteDetail";
+import type { ShareTarget } from "@/components/ShareButton";
 import { StatsBreakdown, StatsHeadline, StatsPanel } from "@/components/StatsPanel";
 import { ThemeToggle, useTheme } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -49,13 +51,19 @@ const MapView = dynamic(
 );
 
 export interface ExplorerProps {
-  /** Forest to preselect on load, from a `/forest/<id>` deep link. The map
-   *  flies to it once data loads; the selection then keeps the address bar in
+  /** Threatened forest to preselect on load, from a `/forest/<id>` deep link. The
+   *  map flies to it once data loads; the selection then keeps the address bar in
    *  sync as the user browses. */
   initialSelectedId?: number | null;
+  /** Already-cleared forest to preselect on load, from a `/forest/<uuid>` deep
+   *  link. Its own namespace (UUID, not the threatened numeric id). */
+  initialSelectedClearedUid?: string | null;
 }
 
-export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
+export function Explorer({
+  initialSelectedId = null,
+  initialSelectedClearedUid = null,
+}: ExplorerProps = {}) {
   const [threatened, setThreatened] = useState<ThreatenedFeatureCollection | null>(null);
   const [forest, setForest] = useState<ForestFeatureCollection | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -66,6 +74,11 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   const [query, setQuery] = useState("");
   const [selectedLandUses, setSelectedLandUses] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(initialSelectedId);
+  // Already-cleared forests select in their own UUID namespace, mutually
+  // exclusive with the threatened selection above (only one card is ever open).
+  const [selectedLostId, setSelectedLostId] = useState<string | null>(
+    initialSelectedClearedUid,
+  );
   const [layers, setLayers] = useState<MapLayerVisibility>({
     forest: false,
     threatened: true,
@@ -81,7 +94,9 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   // A deep link (`/forest/<id>`) lands with the sheet already raised to half so
   // its patch is framed above it; a plain visit opens at the stats peek.
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>(
-    initialSelectedId != null ? "half" : "peek",
+    initialSelectedId != null || initialSelectedClearedUid != null
+      ? "half"
+      : "peek",
   );
   const zonesRequestedRef = useRef(false);
 
@@ -142,6 +157,23 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
     () => sites.find((s) => s.id === selectedId) ?? null,
     [sites, selectedId],
   );
+  const selectedLost = useMemo(
+    () =>
+      deforested?.features.find((f) => f.properties.uid === selectedLostId)
+        ?.properties ?? null,
+    [deforested, selectedLostId],
+  );
+
+  // The single forest a share link should point at: the selected threatened
+  // patch, else the selected cleared forest, else null (share the app). A
+  // ThreatenedProperties is structurally a ShareTarget; a cleared forest is
+  // keyed on its UUID with past-tense phrasing.
+  const shareTarget = useMemo<ShareTarget | null>(() => {
+    if (selectedSite) return selectedSite;
+    if (selectedLost)
+      return { id: selectedLost.uid, label: selectedLost.name, cleared: true };
+    return null;
+  }, [selectedSite, selectedLost]);
 
   const handleToggleLandUse = useCallback((luDesc: string) => {
     setSelectedLandUses((prev) =>
@@ -152,10 +184,19 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
 
   const handleSelect = useCallback((id: number | null) => {
     setSelectedId(id);
+    // Threatened and cleared selections are mutually exclusive — picking one
+    // clears the other so only a single card is ever open.
+    if (id !== null) setSelectedLostId(null);
     // On phones, opening a forest raises the detail sheet to its half snap (so
     // the patch stays visible above it); closing drops it back to the stats
     // peek. Inert on desktop, where the sheet is hidden.
     setSheetSnap(id === null ? "peek" : "half");
+  }, []);
+
+  const handleSelectLost = useCallback((uid: string | null) => {
+    setSelectedLostId(uid);
+    if (uid !== null) setSelectedId(null);
+    setSheetSnap(uid === null ? "peek" : "half");
   }, []);
 
   // Mirror the selection into the address bar so any forest is deep-linkable by
@@ -165,11 +206,13 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   // entry routes (`/` and `/forest/<id>`) since they render this same tree.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const path = forestPath(selectedId);
+    // Whichever selection is active drives the URL — a threatened patch's numeric
+    // id or a cleared forest's UUID, both under `/forest/[id]`.
+    const path = forestPath(selectedId ?? selectedLostId);
     if (window.location.pathname + window.location.search !== path) {
       window.history.replaceState(null, "", path);
     }
-  }, [selectedId]);
+  }, [selectedId, selectedLostId]);
 
   const handleToggleLayer = useCallback((layer: MapLayerKey) => {
     setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
@@ -231,7 +274,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
               and shares the selected forest when one is open, else the app.
               Desktop: the remaining secondary actions inline. Mobile: same
               actions folded into the hamburger (both sets breakpoint-exclusive). */}
-          <ShareButton site={selectedSite} />
+          <ShareButton site={shareTarget} />
           <ThemeToggle className="hidden sm:inline-flex" />
           <Tooltip>
             <TooltipTrigger
@@ -283,6 +326,8 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
               filteredIds={filteredIds}
               selectedId={selectedId}
               onSelect={handleSelect}
+              selectedLostId={selectedLostId}
+              onSelectLost={handleSelectLost}
               layers={layers}
               colorMode={colorMode}
               onColorModeChange={setColorMode}
@@ -301,6 +346,11 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                 <SiteDetail
                   site={selectedSite}
                   onClose={() => handleSelect(null)}
+                />
+              ) : selectedLost ? (
+                <LostDetail
+                  site={selectedLost}
+                  onClose={() => handleSelectLost(null)}
                 />
               ) : (
                 <StatsPanel
@@ -326,6 +376,11 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
                     site={selectedSite}
                     onClose={() => handleSelect(null)}
                   />
+                ) : selectedLost ? (
+                  <LostSheetPeek
+                    site={selectedLost}
+                    onClose={() => handleSelectLost(null)}
+                  />
                 ) : (
                   <div className="flex items-center gap-2">
                     <StatsHeadline
@@ -338,6 +393,8 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
             >
               {selectedSite ? (
                 <SiteDetailBody site={selectedSite} showFootballFields={false} />
+              ) : selectedLost ? (
+                <LostDetailBody site={selectedLost} showFootballFields={false} />
               ) : (
                 <StatsBreakdown
                   sites={landUseFilteredSites}

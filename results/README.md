@@ -114,6 +114,7 @@ get. Not part of the overlay or the validation gate — it's shown in the app fo
 | Property | Meaning |
 | --- | --- |
 | `id` | Sequential id (0, 1) |
+| `uid` | Stable UUID (from the curated input's OSM-style `@id`) — the app's share / deep-link key (`/forest/<uid>`), disjoint from the threatened layer's numeric ids so both share one route |
 | `name` | Forest name (`"Tengah Forest"`, `"Dover Forest East"`) |
 | `area_ha` | Cleared-footprint area in hectares |
 | `dominant_lu_desc` | Area-weighted dominant MP2025 land use under the footprint (nullable) |

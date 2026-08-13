@@ -38,6 +38,11 @@ export interface MapViewProps {
   selectedId: number | null;
   /** Called when the user clicks a threatened patch (or empty map → null). */
   onSelect: (id: number | null) => void;
+  /** Currently selected cleared-forest UUID (its own namespace — a UUID string,
+   *  disjoint from the threatened layer's numeric ids), or null. */
+  selectedLostId: string | null;
+  /** Called when the user clicks an already-cleared patch (or empty map → null). */
+  onSelectLost: (uid: string | null) => void;
   /** Which layers are visible. */
   layers: MapLayerVisibility;
   /** How the threatened layer is coloured (status vs URA land use). */
@@ -245,8 +250,23 @@ const ZONES_FILL_OPACITY = 0.28;
 // one) so they stand out in both. Higher opacity than the context washes above so
 // they read as a solid loss, but still let the Satellite imagery show through.
 const LOST_FILL_OPACITY = 0.6;
-function lostFillColor(theme: Theme): string {
-  return theme === "dark" ? "#f4f4f5" : "#3f3f46";
+// Base scar colour + its selected variant, per app theme. Selecting a cleared
+// forest nudges the neutral toward its extreme (pure white on dark, near-black on
+// light) so the chosen scar reads as picked in both basemaps — the lost layer's
+// analogue of the threatened layer's status→purple selection cue.
+const LOST_FILL: Record<Theme, { base: string; selected: string }> = {
+  dark: { base: "#f4f4f5", selected: "#ffffff" },
+  light: { base: "#3f3f46", selected: "#18181b" },
+};
+/** Theme-driven scar colour as a feature-state `selected`-aware expression. */
+function lostFillColor(theme: Theme): unknown {
+  const c = LOST_FILL[theme];
+  return ["case", SELECTED, c.selected, c.base];
+}
+/** Solid on Standard; on Satellite the base wash, bumped for the selected scar. */
+function lostFillOpacity(basemap: Basemap): unknown {
+  if (basemap === "standard") return SOLID_FILL_OPACITY;
+  return ["case", SELECTED, 0.82, LOST_FILL_OPACITY];
 }
 
 function threatenedFillOpacity(mode: ColorMode, basemap: Basemap): unknown {
@@ -307,10 +327,12 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     data: asFeatureCollection(p.developmentZones),
     promoteId: "id",
   });
+  // The lost layer promotes `uid` (not `id`): the UUID is the selection /
+  // share / deep-link key, so feature-state must key on it too.
   map.addSource(SRC.lost, {
     type: "geojson",
     data: asFeatureCollection(p.deforested),
-    promoteId: "id",
+    promoteId: "uid",
   });
 
   // Every data fill is fully emissive so the Standard basemap's lighting model
@@ -351,8 +373,8 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     type: "fill",
     source: SRC.lost,
     paint: {
-      "fill-color": lostFillColor(p.theme),
-      "fill-opacity": contextFillOpacity(basemap, LOST_FILL_OPACITY),
+      "fill-color": lostFillColor(p.theme) as never,
+      "fill-opacity": lostFillOpacity(basemap) as never,
       "fill-emissive-strength": 1,
     },
   });
@@ -376,6 +398,9 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
   if (p.selectedId !== null) {
     map.setFeatureState({ source: SRC.threatened, id: p.selectedId }, { selected: true });
   }
+  if (p.selectedLostId !== null) {
+    map.setFeatureState({ source: SRC.lost, id: p.selectedLostId }, { selected: true });
+  }
 }
 
 /**
@@ -386,16 +411,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
  * paths frame a patch identically. `Math.max(getZoom(), 13.5)` zooms in from the
  * Singapore overview but never pulls back if the user is already closer.
  */
-function flyToSelected(
-  map: mapboxgl.Map,
-  threatened: ThreatenedFeatureCollection | null,
-  selectedId: number | null,
-) {
-  if (selectedId === null) return;
-  const feature = threatened?.features.find(
-    (f) => f.properties.id === selectedId,
-  );
-  if (!feature) return;
+function flyToPoint(map: mapboxgl.Map, lon: number, lat: number) {
   // On phones the detail bottom-sheet opens to ~half height and would cover a
   // screen-centred patch, so pad the bottom of the fly's framing box by the
   // sheet's coverage — the patch then frames in the visible upper half. Desktop
@@ -407,12 +423,39 @@ function flyToSelected(
     ? { bottom: Math.round(window.innerHeight * 0.45) }
     : undefined;
   map.flyTo({
-    center: [feature.properties.centroid_lon, feature.properties.centroid_lat],
+    center: [lon, lat],
     zoom: Math.max(map.getZoom(), 13.5),
     duration: 2000,
     padding,
     essential: true,
   });
+}
+
+function flyToSelected(
+  map: mapboxgl.Map,
+  threatened: ThreatenedFeatureCollection | null,
+  selectedId: number | null,
+) {
+  if (selectedId === null) return;
+  const feature = threatened?.features.find(
+    (f) => f.properties.id === selectedId,
+  );
+  if (!feature) return;
+  flyToPoint(map, feature.properties.centroid_lon, feature.properties.centroid_lat);
+}
+
+/** {@link flyToSelected} for the already-cleared layer, keyed on the UUID. */
+function flyToSelectedLost(
+  map: mapboxgl.Map,
+  deforested: DeforestedFeatureCollection | null,
+  selectedLostId: string | null,
+) {
+  if (selectedLostId === null) return;
+  const feature = deforested?.features.find(
+    (f) => f.properties.uid === selectedLostId,
+  );
+  if (!feature) return;
+  flyToPoint(map, feature.properties.centroid_lon, feature.properties.centroid_lat);
 }
 
 /**
@@ -430,6 +473,7 @@ export function MapView(props: MapViewProps) {
   const readyRef = useRef(false);
   const hoveredRef = useRef<number | null>(null);
   const selectedRef = useRef<number | null>(null);
+  const selectedLostRef = useRef<string | null>(null);
 
   // Basemap is a map-only concern (no other component reads it), so it lives here
   // rather than being lifted like colorMode. Defaults to the Standard style the
@@ -508,11 +552,14 @@ export function MapView(props: MapViewProps) {
       // basemap effect with the then-current basemap.
       addSourcesAndLayers(map, p, "standard");
       selectedRef.current = p.selectedId;
+      selectedLostRef.current = p.selectedLostId;
       readyRef.current = true;
       // Frame an initial selection (a `/forest/<id>` deep link): the selection
       // effect already ran and bailed while readyRef was false, so it won't
-      // re-fire on its own — fly here now that the map is ready.
+      // re-fire on its own — fly here now that the map is ready. Only one of the
+      // two can be set (they're mutually exclusive), so both calls are safe.
       flyToSelected(map, p.threatened, p.selectedId);
+      flyToSelectedLost(map, p.deforested, p.selectedLostId);
 
       // --- interaction (bound once; survives basemap style swaps) ---
       map.on("mousemove", LYR.threatFill, (e) => {
@@ -609,8 +656,27 @@ export function MapView(props: MapViewProps) {
       });
 
       map.on("click", (e) => {
-        const hits = map.queryRenderedFeatures(e.point, { layers: [LYR.threatFill] });
-        propsRef.current.onSelect(hits.length ? Number(hits[0].id) : null);
+        const p = propsRef.current;
+        // The headline vulnerable layer wins when it's under the cursor (it also
+        // renders on top); otherwise fall to an already-cleared scar; an empty
+        // click clears both. queryRenderedFeatures skips hidden layers, so a
+        // toggled-off layer isn't clickable. Lost ids are UUID strings.
+        const threatHits = map.queryRenderedFeatures(e.point, {
+          layers: [LYR.threatFill],
+        });
+        if (threatHits.length) {
+          p.onSelect(Number(threatHits[0].id));
+          return;
+        }
+        const lostHits = map.queryRenderedFeatures(e.point, {
+          layers: [LYR.lostFill],
+        });
+        if (lostHits.length) {
+          p.onSelectLost(String(lostHits[0].id));
+          return;
+        }
+        p.onSelect(null);
+        p.onSelectLost(null);
       });
     });
 
@@ -684,6 +750,24 @@ export function MapView(props: MapViewProps) {
     selectedRef.current = props.selectedId;
   }, [props.selectedId, props.threatened]);
 
+  // --- lost selection: feature-state + flyTo -----------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    const prev = selectedLostRef.current;
+    if (prev !== null && prev !== props.selectedLostId) {
+      map.setFeatureState({ source: SRC.lost, id: prev }, { selected: false });
+    }
+    if (props.selectedLostId !== null) {
+      map.setFeatureState(
+        { source: SRC.lost, id: props.selectedLostId },
+        { selected: true },
+      );
+      flyToSelectedLost(map, props.deforested, props.selectedLostId);
+    }
+    selectedLostRef.current = props.selectedLostId;
+  }, [props.selectedLostId, props.deforested]);
+
   // --- visibility --------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
@@ -716,7 +800,11 @@ export function MapView(props: MapViewProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    map.setPaintProperty(LYR.lostFill, "fill-color", lostFillColor(props.theme));
+    map.setPaintProperty(
+      LYR.lostFill,
+      "fill-color",
+      lostFillColor(props.theme) as never,
+    );
   }, [props.theme]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
@@ -741,6 +829,7 @@ export function MapView(props: MapViewProps) {
       }
       addSourcesAndLayers(map, p, basemap);
       selectedRef.current = p.selectedId;
+      selectedLostRef.current = p.selectedLostId;
       readyRef.current = true;
     });
   }, [basemap]);

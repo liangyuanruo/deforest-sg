@@ -129,10 +129,6 @@ export function SiteDetailBody({
 }) {
   const percent = formatPercent(site.threatened_fraction);
   const width = `${Math.min(100, site.threatened_fraction * 100).toFixed(0)}%`;
-  const luDescription = descriptionForLandUse(site.dominant_lu_desc);
-  const gpr = parseGpr(site.gpr);
-  const gprRange = formatGprRange(gpr.ratios);
-  const hasGpr = gpr.ratios.length > 0 || gpr.codes.length > 0;
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -165,59 +161,7 @@ export function SiteDetailBody({
           )}
         </div>
 
-        <dl className="flex flex-col gap-2 text-xs">
-          <Row
-            icon={<Layers className="size-3.5" />}
-            label="URA zoning"
-            value={site.dominant_lu_desc}
-            swatch={colorForLandUse(site.dominant_lu_desc)}
-          />
-          {luDescription && (
-            <p className="-mt-0.5 text-xs leading-snug text-muted-foreground">
-              {luDescription}
-            </p>
-          )}
-          {hasGpr && (
-            <Row
-              icon={<Building2 className="size-3.5" />}
-              label="Plot ratio"
-              value={gprRange ?? "—"}
-              labelAfter={
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <button
-                        type="button"
-                        aria-label="What is plot ratio?"
-                        className="text-muted-foreground/70 hover:text-foreground"
-                      >
-                        <Info className="size-3" />
-                      </button>
-                    }
-                  />
-                  <TooltipContent side="top" className="max-w-[15rem]">
-                    {GPR_EXPLAINER}
-                  </TooltipContent>
-                </Tooltip>
-              }
-            />
-          )}
-          {gpr.codes.map((code) => {
-            const d = describeGprCode(code);
-            return (
-              <p
-                key={code}
-                className="-mt-0.5 text-xs leading-snug text-muted-foreground"
-              >
-                <span className="font-medium text-foreground">
-                  {code}
-                  {d ? ` — ${d.label}` : ""}
-                </span>
-                {d ? <>. {d.description}</> : null}
-              </p>
-            );
-          })}
-        </dl>
+        <ZoningRows luDesc={site.dominant_lu_desc} gpr={site.gpr} />
 
         {(site.context || site.wildlife || site.status) && (
           <div className="flex flex-col gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
@@ -237,6 +181,85 @@ export function SiteDetailBody({
           </div>
         )}
     </div>
+  );
+}
+
+/**
+ * The URA-zoning rows shared by the vulnerable-forest card ({@link SiteDetailBody})
+ * and the already-cleared card ({@link LostDetail}): a land-use swatch + label, its
+ * plain-language gloss, the plot-ratio range (with a "what is plot ratio?" tooltip),
+ * and any planning-code legends. Extracted so the two cards can't drift — the DOM
+ * mirror of the map's `zoningRowsHtml` popup helper. `luDesc` may be null (a cleared
+ * area can fall outside every MP2025 polygon), in which case the swatch row is omitted.
+ */
+export function ZoningRows({
+  luDesc,
+  gpr,
+}: {
+  luDesc: string | null;
+  gpr: string | null;
+}) {
+  const luDescription = luDesc ? descriptionForLandUse(luDesc) : undefined;
+  const parsed = parseGpr(gpr);
+  const gprRange = formatGprRange(parsed.ratios);
+  const hasGpr = parsed.ratios.length > 0 || parsed.codes.length > 0;
+
+  return (
+    <dl className="flex flex-col gap-2 text-xs">
+      {luDesc && (
+        <Row
+          icon={<Layers className="size-3.5" />}
+          label="URA zoning"
+          value={luDesc}
+          swatch={colorForLandUse(luDesc)}
+        />
+      )}
+      {luDescription && (
+        <p className="-mt-0.5 text-xs leading-snug text-muted-foreground">
+          {luDescription}
+        </p>
+      )}
+      {hasGpr && (
+        <Row
+          icon={<Building2 className="size-3.5" />}
+          label="Plot ratio"
+          value={gprRange ?? "—"}
+          labelAfter={
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label="What is plot ratio?"
+                    className="text-muted-foreground/70 hover:text-foreground"
+                  >
+                    <Info className="size-3" />
+                  </button>
+                }
+              />
+              <TooltipContent side="top" className="max-w-[15rem]">
+                {GPR_EXPLAINER}
+              </TooltipContent>
+            </Tooltip>
+          }
+        />
+      )}
+      {parsed.codes.map((code) => {
+        const d = describeGprCode(code);
+        return (
+          <p
+            key={code}
+            className="-mt-0.5 text-xs leading-snug text-muted-foreground"
+          >
+            <span className="font-medium text-foreground">
+              {code}
+              {d ? ` — ${d.label}` : ""}
+            </span>
+            {d ? <>. {d.description}</> : null}
+          </p>
+        );
+      })}
+    </dl>
   );
 }
 

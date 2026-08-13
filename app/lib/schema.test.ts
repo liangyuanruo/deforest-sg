@@ -198,6 +198,7 @@ describe("DeforestedFeatureCollectionSchema", () => {
         geometry: { type: "Polygon", coordinates: [] },
         properties: {
           id: 0,
+          uid: "8cbcd280-96e8-11f1-9962-e3c92fbd79cc",
           name: "Dover Forest East",
           area_ha: 8.6631,
           dominant_lu_desc: "RESIDENTIAL",
@@ -214,6 +215,7 @@ describe("DeforestedFeatureCollectionSchema", () => {
   it("parses a valid fixture", () => {
     const parsed = DeforestedFeatureCollectionSchema.parse(validFixture);
     const props = parsed.features[0].properties;
+    expect(props.uid).toBe("8cbcd280-96e8-11f1-9962-e3c92fbd79cc");
     expect(props.name).toBe("Dover Forest East");
     expect(props.area_ha).toBeCloseTo(8.6631);
     expect(props.dominant_lu_desc).toBe("RESIDENTIAL");
@@ -248,6 +250,7 @@ describe("DeforestedFeatureCollectionSchema", () => {
           ...validFixture.features[0],
           properties: {
             id: 0,
+            uid: "8cbcd280-96e8-11f1-9962-e3c92fbd79cc",
             area_ha: 8.6631,
             dominant_lu_desc: "RESIDENTIAL",
             lu_desc_breakdown: { RESIDENTIAL: 5.097 },

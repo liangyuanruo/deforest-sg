@@ -43,8 +43,10 @@ const UTM_SOURCE: Record<ShareChannel, string> = {
 };
 
 /** The in-app path that deep-links to a forest (or the app root when none is
- *  selected). Selecting a forest mirrors this into the address bar. */
-export function forestPath(id: number | null): string {
+ *  selected). `id` is a numeric OSM id for a threatened patch or a UUID string
+ *  for an already-cleared forest — both live under the one `/forest/[id]` route.
+ *  Selecting a forest mirrors this into the address bar. */
+export function forestPath(id: number | string | null): string {
   return id === null ? "/" : `/forest/${id}`;
 }
 
@@ -54,7 +56,7 @@ export function forestPath(id: number | null): string {
  */
 export function buildShareUrl(
   origin: string,
-  id: number | null,
+  id: number | string | null,
   channel: ShareChannel,
 ): string {
   const url = new URL(forestPath(id), origin);
@@ -65,11 +67,13 @@ export function buildShareUrl(
 }
 
 /** The human-readable message that rides along with the link on WhatsApp,
- *  Telegram, and the native share sheet. */
-export function shareText(label: string | null): string {
-  return label
-    ? `${label} is among the Singapore forests zoned for development.`
-    : "Which forests will Singapore lose to development?";
+ *  Telegram, and the native share sheet. `cleared` forests are already lost, so
+ *  they get past-tense phrasing; threatened patches are still at risk. */
+export function shareText(label: string | null, cleared = false): string {
+  if (!label) return "Which forests will Singapore lose to development?";
+  return cleared
+    ? `${label} is a Singapore forest already cleared for development.`
+    : `${label} is among the Singapore forests zoned for development.`;
 }
 
 /** WhatsApp share deep-link. `wa.me/?text=` (no phone number) opens the app's

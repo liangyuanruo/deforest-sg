@@ -1,7 +1,15 @@
 import { ImageResponse } from "next/og";
 
 import { formatFootballFields, formatHa, formatPercent } from "@/lib/format";
-import type { ThreatenedProperties } from "@/lib/schema";
+import {
+  getClearedByUid,
+  getForestById,
+  isThreatenedIdParam,
+} from "@/lib/forests-server";
+import type {
+  DeforestedProperties,
+  ThreatenedProperties,
+} from "@/lib/schema";
 
 /** The TreePine glyph, copied verbatim from `app/icon.svg` so every card
  *  matches the favicon/header mark. Sized by the caller. */
@@ -164,6 +172,119 @@ export function renderForestOgImage(site: ThreatenedProperties) {
           >
             {percent} of this patch · would become {site.dominant_lu_desc}
           </div>
+        </div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630,
+    },
+  );
+}
+
+/**
+ * Resolve a `/forest/[id]` param to its social card — the vulnerable-forest card
+ * for a numeric id, the already-cleared card for a UUID, or the generic card if
+ * the id is unknown (a stale link) so a preview always renders. Shared by the
+ * colocated `opengraph-image.tsx` and `twitter-image.tsx` so the two can't drift.
+ */
+export async function renderForestParamImage(id: string) {
+  if (isThreatenedIdParam(id)) {
+    const site = await getForestById(Number(id));
+    return site ? renderForestOgImage(site) : renderOgImage();
+  }
+  const cleared = await getClearedByUid(id);
+  return cleared ? renderClearedOgImage(cleared) : renderOgImage();
+}
+
+/**
+ * Per-forest social card for an *already-cleared* forest (Tengah, Dover East).
+ * A muted slate gradient — not the green identity — signals loss rather than
+ * risk: the forest is gone. Headlines the name, then the cleared area (with a
+ * football-field comparison) and the MP2025 zoning that replaced it.
+ */
+export function renderClearedOgImage(site: DeforestedProperties) {
+  const area = formatHa(site.area_ha);
+  const fields = formatFootballFields(site.area_ha);
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "72px 80px",
+          background: "linear-gradient(135deg, #3f3f46 0%, #18181b 100%)",
+          color: "#ffffff",
+        }}
+      >
+        {/* Wordmark row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <TreeGlyph size={52} stroke="#ffffff" />
+          <div style={{ display: "flex", fontSize: 34, fontWeight: 700 }}>
+            Deforest SG
+          </div>
+        </div>
+
+        {/* Headline: the forest name */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            maxWidth: 1040,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: 30,
+              fontWeight: 600,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.6)",
+            }}
+          >
+            Already cleared
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 84,
+              fontWeight: 700,
+              lineHeight: 1.05,
+            }}
+          >
+            {site.name}
+          </div>
+        </div>
+
+        {/* Figures that carry the story */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 40,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.95)",
+            }}
+          >
+            {area} cleared for development · {fields}
+          </div>
+          {site.dominant_lu_desc ? (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 30,
+                color: "rgba(255,255,255,0.82)",
+              }}
+            >
+              Now zoned {site.dominant_lu_desc}
+            </div>
+          ) : null}
         </div>
       </div>
     ),

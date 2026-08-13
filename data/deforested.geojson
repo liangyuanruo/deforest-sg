@@ -4,7 +4,8 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Dover Forest East"
+                "name": "Dover Forest East",
+                "@id": "8cbcd280-96e8-11f1-9962-e3c92fbd79cc"
             },
             "geometry": {
                 "type": "Polygon",
@@ -179,7 +180,8 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Tengah Forest"
+                "name": "Tengah Forest",
+                "@id": "8cbcf990-96e8-11f1-9962-e3c92fbd79cc"
             },
             "geometry": {
                 "type": "MultiPolygon",

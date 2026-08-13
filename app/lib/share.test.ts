@@ -16,6 +16,12 @@ describe("forestPath", () => {
   it("is the app root when nothing is selected", () => {
     expect(forestPath(null)).toBe("/");
   });
+
+  it("encodes an already-cleared forest by its UUID under the same route", () => {
+    expect(forestPath("8cbcd280-96e8-11f1-9962-e3c92fbd79cc")).toBe(
+      "/forest/8cbcd280-96e8-11f1-9962-e3c92fbd79cc",
+    );
+  });
 });
 
 describe("buildShareUrl", () => {
@@ -58,6 +64,12 @@ describe("shareText", () => {
     expect(shareText(null)).toBe(
       "Which forests will Singapore lose to development?",
     );
+  });
+
+  it("uses past-tense phrasing for an already-cleared forest", () => {
+    const text = shareText("Tengah Forest", true);
+    expect(text).toContain("Tengah Forest");
+    expect(text).toContain("already cleared");
   });
 });
 

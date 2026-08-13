@@ -18,7 +18,6 @@ import {
   telegramHref,
   whatsappHref,
 } from "@/lib/share";
-import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
 /** Values that only exist in the browser are read via `useSyncExternalStore`,
@@ -31,9 +30,23 @@ function useBrowserValue<T>(getClient: () => T, serverValue: T): T {
   return useSyncExternalStore(noSubscribe, getClient, () => serverValue);
 }
 
+/**
+ * What a share link points at. `id` is a numeric OSM id (threatened patch) or a
+ * UUID string (already-cleared forest) — both resolve under `/forest/[id]`. A
+ * {@link ThreatenedProperties} is structurally a `ShareTarget` (it has `id` +
+ * `label`), so the vulnerable-forest call sites can pass one directly; cleared
+ * forests pass `{ id: uid, label: name, cleared: true }`.
+ */
+export interface ShareTarget {
+  id: number | string;
+  label: string;
+  /** Already-lost forests get past-tense share phrasing. */
+  cleared?: boolean;
+}
+
 export interface ShareButtonProps {
   /** The selected forest to share, or `null` to share the app itself. */
-  site: ThreatenedProperties | null;
+  site: ShareTarget | null;
   /** Button size — `icon` in the header, `icon-sm` in the compact site card. */
   size?: "icon" | "icon-sm";
   className?: string;
@@ -48,7 +61,7 @@ export interface ShareButtonProps {
 export function ShareButton({ site, size = "icon", className }: ShareButtonProps) {
   const id = site?.id ?? null;
   const label = site?.label ?? null;
-  const text = shareText(label);
+  const text = shareText(label, site?.cleared ?? false);
 
   // Origin is resolved on the client: the canonical production domain when
   // Vercel exposes it (so shared links are stable), else the live origin (local

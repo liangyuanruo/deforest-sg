@@ -343,6 +343,11 @@ def annotate_deforested(deforested: gpd.GeoDataFrame, mp: gpd.GeoDataFrame) -> g
     (same pattern as involved_development_zones), then overlay runs on that subset.
     """
     d = deforested.copy()
+    # The curated input carries an OSM-style `@id` — a stable UUID per cleared
+    # forest. Keep it as `uid`: it's the share/deep-link identifier the app routes
+    # on (`/forest/<uid>`), disjoint from the threatened layer's numeric OSM ids.
+    if "@id" in d.columns:
+        d = d.rename(columns={"@id": "uid"})
     d["id"] = range(len(d))
     d["area_ha"] = (d.geometry.area / 1e4).round(4)
 
@@ -575,7 +580,7 @@ def main() -> None:
     #    MP2025 zoning that replaced it (dominant land-use + plot ratio). Context only —
     #    not part of the threatened overlay or the validation gate.
     deforested_out = deforested_annot[[
-        "id", "name", "area_ha", "dominant_lu_desc", "lu_desc_breakdown", "gpr",
+        "id", "uid", "name", "area_ha", "dominant_lu_desc", "lu_desc_breakdown", "gpr",
         "centroid_lon", "centroid_lat", "source", "geometry",
     ]].copy()
     deforested_out["lu_desc_breakdown"] = deforested_out["lu_desc_breakdown"].apply(
