@@ -673,14 +673,50 @@ export function MapView(props: MapViewProps) {
         popup.remove();
       });
 
-      // The base forest wash: a light popup naming the OSM patch + its area. Forest
-      // has no MP2025 zoning join (it's raw ground cover), so — unlike the two
-      // popups above — there are no land-use rows. The headline/cleared layers sit
-      // on top of (and, for threatened, entirely within) the forest, so defer to
-      // them when either is under the cursor: forest only speaks for bare forest.
-      map.on("mousemove", LYR.forestFill, (e) => {
+      // URA development zone: the masterplan parcel that touches forest, named by
+      // its intended land use. Reuses the shared zoning rows verbatim (swatch +
+      // land-use label, plain-language gloss, plot ratio) under a generic header,
+      // with the parcel's own area. The headline/cleared fills paint on top of the
+      // zone wash, so defer to them when either is under the cursor — the more
+      // specific patch wins; the zone speaks only for bare zoned land.
+      map.on("mousemove", LYR.zonesFill, (e) => {
         const covered = map.queryRenderedFeatures(e.point, {
           layers: [LYR.threatFill, LYR.lostFill],
+        });
+        if (covered.length) return;
+        const pr = e.features?.[0]?.properties as {
+          lu_desc?: string | null;
+          gpr?: string | null;
+          area_ha?: number;
+        } | null;
+        const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
+        const fields =
+          typeof pr?.area_ha === "number" ? formatFootballFields(pr.area_ha) : "";
+        const meta = [area, fields && escapeHtml(fields)].filter(Boolean).join(" · ");
+        const zoning = zoningRowsHtml(pr?.lu_desc, pr?.gpr);
+        popup
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div class="deforest-popup__body"><div class="deforest-popup__title">Development zone</div>` +
+              (meta ? `<div class="deforest-popup__meta">${meta}</div>` : "") +
+              zoning +
+              `</div>`,
+          )
+          .addTo(map);
+      });
+
+      map.on("mouseleave", LYR.zonesFill, () => {
+        popup.remove();
+      });
+
+      // The base forest wash: a light popup naming the OSM patch + its area. Forest
+      // has no MP2025 zoning join (it's raw ground cover), so — unlike the popups
+      // above — there are no land-use rows. The zone/cleared/headline fills all sit
+      // on top of (and, for threatened, entirely within) the forest, so defer to
+      // any of them under the cursor: forest only speaks for bare forest.
+      map.on("mousemove", LYR.forestFill, (e) => {
+        const covered = map.queryRenderedFeatures(e.point, {
+          layers: [LYR.threatFill, LYR.lostFill, LYR.zonesFill],
         });
         if (covered.length) return;
         const pr = e.features?.[0]?.properties as {
