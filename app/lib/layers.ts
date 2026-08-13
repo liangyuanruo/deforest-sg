@@ -57,10 +57,10 @@ export const MAP_LAYERS: MapLayerMeta[] = [
   },
   {
     key: "lost",
-    label: "Already cleared",
+    label: "Deforested",
     swatch: "#71717a",
     description: "Forest already cleared for development",
     role: "lost",
-    shortLabel: "already cleared",
+    shortLabel: "deforested",
   },
 ];
