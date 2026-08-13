@@ -181,7 +181,11 @@ function FilterBody({
           Source layers
         </p>
         <ul className="flex flex-col gap-1">
-          {sourceLayers.map((layer) => (
+          {/* The "already cleared" layer rides along here rather than in its own
+              section — it's context, not a computed result, so it sits with the
+              other non-result inputs (the two-item formula above still reads only
+              the source pair). */}
+          {[...sourceLayers, ...lostLayers].map((layer) => (
             <LayerRow
               key={layer.key}
               layer={layer}
@@ -190,24 +194,6 @@ function FilterBody({
             />
           ))}
         </ul>
-
-        {lostLayers.length > 0 && (
-          <>
-            <p className="px-1 pt-1 text-xs font-medium text-muted-foreground">
-              Already cleared
-            </p>
-            <ul className="flex flex-col gap-1">
-              {lostLayers.map((layer) => (
-                <LayerRow
-                  key={layer.key}
-                  layer={layer}
-                  checked={layers[layer.key]}
-                  onToggle={() => onToggleLayer(layer.key)}
-                />
-              ))}
-            </ul>
-          </>
-        )}
       </section>
     </>
   );

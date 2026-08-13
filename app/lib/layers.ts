@@ -57,10 +57,10 @@ export const MAP_LAYERS: MapLayerMeta[] = [
   },
   {
     key: "lost",
-    label: "Already lost",
+    label: "Already cleared",
     swatch: "#71717a",
-    description: "Forest already cleared for development (Tengah, Dover East)",
+    description: "Forest already cleared for development",
     role: "lost",
-    shortLabel: "already lost",
+    shortLabel: "already cleared",
   },
 ];
