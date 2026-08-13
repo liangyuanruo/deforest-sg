@@ -757,14 +757,45 @@ export function MapView(props: MapViewProps) {
           layers: [LYR.threatFill],
         });
         if (threatHits.length) {
-          p.onSelect(Number(threatHits[0].id));
+          const id = Number(threatHits[0].id);
+          // Re-clicking the already-selected patch leaves `selectedId`
+          // unchanged, so the selection effect won't re-fire — fly here so a
+          // click *always* re-frames, even after the user has panned away.
+          // A click on a different patch changes state and lets the effect fly.
+          if (id === p.selectedId) {
+            const pr = threatHits[0].properties as {
+              centroid_lon?: number;
+              centroid_lat?: number;
+            } | null;
+            if (
+              typeof pr?.centroid_lon === "number" &&
+              typeof pr?.centroid_lat === "number"
+            ) {
+              flyToPoint(map, pr.centroid_lon, pr.centroid_lat);
+            }
+          }
+          p.onSelect(id);
           return;
         }
         const lostHits = map.queryRenderedFeatures(e.point, {
           layers: [LYR.lostFill],
         });
         if (lostHits.length) {
-          p.onSelectLost(String(lostHits[0].id));
+          const uid = String(lostHits[0].id);
+          // Same re-selection guard as the threatened layer above.
+          if (uid === p.selectedLostId) {
+            const pr = lostHits[0].properties as {
+              centroid_lon?: number;
+              centroid_lat?: number;
+            } | null;
+            if (
+              typeof pr?.centroid_lon === "number" &&
+              typeof pr?.centroid_lat === "number"
+            ) {
+              flyToPoint(map, pr.centroid_lon, pr.centroid_lat);
+            }
+          }
+          p.onSelectLost(uid);
           return;
         }
         p.onSelect(null);
