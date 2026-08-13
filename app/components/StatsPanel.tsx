@@ -20,7 +20,8 @@ import {
   descriptionForLandUse,
   toColoredSlices,
 } from "@/lib/landuse";
-import { MAP_LAYERS, type ColorMode } from "@/lib/layers";
+import { MAP_LAYERS, swatchForLayer, type ColorMode } from "@/lib/layers";
+import type { Theme } from "@/components/ThemeToggle";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,9 @@ export interface StatsPanelProps {
    * which the breakdown below already keys, so the key is omitted.
    */
   colorMode: ColorMode;
+  /** Current app theme — the "Deforested" scar swatch is theme-flipped, so the key
+   *  resolves its colour per theme (via swatchForLayer) to match the map fill. */
+  theme: Theme;
   className?: string;
 }
 
@@ -68,6 +72,7 @@ export function StatsPanel({
   sites,
   totalForestHa,
   colorMode,
+  theme,
   className,
 }: StatsPanelProps) {
   // Collapsed by default on small screens so the breakdown never covers the
@@ -108,6 +113,7 @@ export function StatsPanel({
             sites={sites}
             totalForestHa={totalForestHa}
             colorMode={colorMode}
+            theme={theme}
           />
         </div>
       )}
@@ -175,6 +181,7 @@ export function StatsBreakdown({
   sites,
   totalForestHa,
   colorMode,
+  theme,
   hideFigures = false,
   hideStatusKey = false,
 }: Omit<StatsPanelProps, "className"> & {
@@ -210,8 +217,14 @@ export function StatsBreakdown({
               so it doesn't read as a breakdown item. */}
           {colorMode === "status" && !hideStatusKey && (
             <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5 text-[11px]">
-              <MapKeyRow swatch={THREATENED_KEY.swatch} label={THREATENED_KEY.label} />
-              <MapKeyRow swatch={LOST_KEY.swatch} label={LOST_KEY.label} />
+              <MapKeyRow
+                swatch={swatchForLayer(THREATENED_KEY, theme)}
+                label={THREATENED_KEY.label}
+              />
+              <MapKeyRow
+                swatch={swatchForLayer(LOST_KEY, theme)}
+                label={LOST_KEY.label}
+              />
             </div>
           )}
 

@@ -236,6 +236,7 @@ export function Explorer({
     onClearLandUses: handleClearLandUses,
     layers,
     onToggleLayer: handleToggleLayer,
+    theme,
   };
 
   return (
@@ -357,6 +358,7 @@ export function Explorer({
                   sites={landUseFilteredSites}
                   totalForestHa={totalForestHa}
                   colorMode={colorMode}
+                  theme={theme}
                 />
               )}
             </div>
@@ -400,6 +402,7 @@ export function Explorer({
                   sites={landUseFilteredSites}
                   totalForestHa={totalForestHa}
                   colorMode={colorMode}
+                  theme={theme}
                   hideFigures
                   hideStatusKey
                 />

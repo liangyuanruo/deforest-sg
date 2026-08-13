@@ -18,7 +18,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { MAP_LAYERS, type MapLayerKey, type MapLayerVisibility } from "@/lib/layers";
+import {
+  MAP_LAYERS,
+  swatchForLayer,
+  type MapLayerKey,
+  type MapLayerVisibility,
+} from "@/lib/layers";
+import type { Theme } from "@/components/ThemeToggle";
 import type { LandUseOption } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +38,9 @@ export interface FilterPanelProps {
   onClearLandUses: () => void;
   layers: MapLayerVisibility;
   onToggleLayer: (layer: MapLayerKey) => void;
+  /** Current app theme — the "Deforested" layer's swatch is theme-flipped, so its
+   *  legend dot resolves per theme (swatchForLayer) to match the map fill. */
+  theme: Theme;
 }
 
 type FilterBodyProps = Omit<FilterPanelProps, "open" | "onOpenChange">;
@@ -102,6 +111,7 @@ function FilterBody({
   onClearLandUses,
   layers,
   onToggleLayer,
+  theme,
 }: FilterBodyProps) {
   const activeCount = selectedLandUses.length;
 
@@ -171,6 +181,7 @@ function FilterBody({
             <LayerRow
               key={layer.key}
               layer={layer}
+              theme={theme}
               checked={layers[layer.key]}
               onToggle={() => onToggleLayer(layer.key)}
             />
@@ -189,6 +200,7 @@ function FilterBody({
             <LayerRow
               key={layer.key}
               layer={layer}
+              theme={theme}
               checked={layers[layer.key]}
               onToggle={() => onToggleLayer(layer.key)}
             />
@@ -248,10 +260,12 @@ function LayerFormula() {
 /** One toggle row: checkbox + swatch + label/description. */
 function LayerRow({
   layer,
+  theme,
   checked,
   onToggle,
 }: {
   layer: (typeof MAP_LAYERS)[number];
+  theme: Theme;
   checked: boolean;
   onToggle: () => void;
 }) {
@@ -264,7 +278,7 @@ function LayerRow({
           onChange={onToggle}
           className="size-4 accent-foreground"
         />
-        <LayerDot color={layer.swatch} />
+        <LayerDot color={swatchForLayer(layer, theme)} />
         <span className="flex min-w-0 flex-col">
           <span className="text-sm text-foreground">{layer.label}</span>
           <span className="text-xs text-muted-foreground">

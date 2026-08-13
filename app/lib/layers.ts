@@ -1,8 +1,11 @@
 /**
  * Map-layer metadata shared by the Mapbox view (visibility + legend) and the
  * filter modal (toggles). Kept mapbox-free so importing it never drags the
- * WebGL bundle into a component that must stay server-renderable.
+ * WebGL bundle into a component that must stay server-renderable. (The `Theme`
+ * import is type-only, erased at compile — no client runtime pulled in.)
  */
+import type { Theme } from "@/components/ThemeToggle";
+
 export type MapLayerKey = "forest" | "threatened" | "zones" | "lost";
 export type MapLayerVisibility = Record<MapLayerKey, boolean>;
 
@@ -57,10 +60,37 @@ export const MAP_LAYERS: MapLayerMeta[] = [
   },
   {
     key: "lost",
+    // Theme-flipped on the map, so its legend swatch is resolved per theme via
+    // `swatchForLayer` (see LOST_FILL_COLOR) — this static value is only a
+    // fallback for any raw `.swatch` read, kept equal to the light-theme scar.
     label: "Deforested",
-    swatch: "#71717a",
+    swatch: "#3f3f46",
     description: "Forest already cleared for development",
     role: "lost",
     shortLabel: "deforested",
   },
 ];
+
+/**
+ * The already-cleared "scar" fill is theme-flipped — near-white on the dark app
+ * theme, dark grey on the light one — so it stays visible in both. This is the
+ * **single source of truth** for that colour: the map paint (`MapView`) and every
+ * legend swatch resolve it here, so a legend chip can never drift from the polygon.
+ */
+export const LOST_FILL_COLOR: Record<Theme, string> = {
+  dark: "#f4f4f5",
+  light: "#3f3f46",
+};
+
+/**
+ * The colour a layer is painted on the map at the current app theme — the value a
+ * legend swatch must use to match it. Fixed-fill layers return their static
+ * `swatch`; the theme-flipped "lost" scar resolves per theme. Route every legend
+ * chip through this so the key and the map can't diverge.
+ *
+ * (The `zones` swatch is representative only — that layer is painted per parcel
+ * from the URA palette, so no single colour matches every parcel by design.)
+ */
+export function swatchForLayer(layer: MapLayerMeta, theme: Theme): string {
+  return layer.key === "lost" ? LOST_FILL_COLOR[theme] : layer.swatch;
+}

@@ -7,7 +7,11 @@ import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatFootballFields, formatHa } from "@/lib/format";
 import { formatGprRange, GPR_CODE_LABEL, parseGpr } from "@/lib/gpr";
 import type { Theme } from "@/components/ThemeToggle";
-import { type ColorMode, type MapLayerVisibility } from "@/lib/layers";
+import {
+  LOST_FILL_COLOR,
+  type ColorMode,
+  type MapLayerVisibility,
+} from "@/lib/layers";
 import {
   colorForLandUse,
   descriptionForLandUse,
@@ -250,25 +254,27 @@ const ZONES_FILL_OPACITY = 0.28;
 // one) so they stand out in both. Higher opacity than the context washes above so
 // they read as a solid loss, but still let the Satellite imagery show through.
 const LOST_FILL_OPACITY = 0.6;
-// Base scar colour + its selected variant, per app theme. Selecting a cleared
-// forest nudges the neutral toward its extreme (pure white on dark, near-black on
-// light) so the chosen scar reads as picked in both basemaps — the lost layer's
-// analogue of the threatened layer's status→purple selection cue.
-const LOST_FILL: Record<Theme, { base: string; selected: string }> = {
-  dark: { base: "#f4f4f5", selected: "#ffffff" },
-  light: { base: "#3f3f46", selected: "#18181b" },
+// The base scar colour is LOST_FILL_COLOR (shared with the legend — single source
+// of truth, so the map fill and the key swatch can't drift). Only the *selected*
+// extreme lives here: selecting a cleared forest nudges the neutral toward pure
+// white (dark) / near-black (light) so the chosen scar reads as picked in both
+// basemaps — the lost layer's analogue of the threatened status→purple cue, and a
+// map-only cue with no legend counterpart.
+const LOST_SELECTED: Record<Theme, string> = {
+  dark: "#ffffff",
+  light: "#18181b",
 };
 /**
  * The already-cleared fill's colour. In "landuse" mode it paints each scar its
  * URA zoning colour (the dominant land use that replaced the forest) — matching
  * the threatened layer, so the whole map recolours to zoning together; colour
  * follows the entity, so selection reads via opacity there, not a recolour. In
- * "status" mode it's the theme-flipped scar neutral, `selected`-aware.
+ * "status" mode it's the theme-flipped scar neutral (LOST_FILL_COLOR),
+ * `selected`-aware via LOST_SELECTED.
  */
 function lostFillColor(theme: Theme, mode: ColorMode): unknown {
   if (mode === "landuse") return landUseFillExpression("dominant_lu_desc");
-  const c = LOST_FILL[theme];
-  return ["case", SELECTED, c.selected, c.base];
+  return ["case", SELECTED, LOST_SELECTED[theme], LOST_FILL_COLOR[theme]];
 }
 /** Solid on Standard; on Satellite the base wash, bumped for the selected scar. */
 function lostFillOpacity(basemap: Basemap): unknown {
