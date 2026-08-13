@@ -730,7 +730,7 @@ export function MapView(props: MapViewProps) {
           typeof pr?.forest_area_ha === "number"
             ? formatFootballFields(pr.forest_area_ha)
             : "";
-        const meta = ["Mapped forest", area, fields && escapeHtml(fields)]
+        const meta = [area, fields && escapeHtml(fields)]
           .filter(Boolean)
           .join(" · ");
         popup
