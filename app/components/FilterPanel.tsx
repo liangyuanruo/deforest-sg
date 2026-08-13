@@ -190,6 +190,24 @@ function FilterBody({
             />
           ))}
         </ul>
+
+        {lostLayers.length > 0 && (
+          <>
+            <p className="px-1 pt-1 text-xs font-medium text-muted-foreground">
+              Already cleared
+            </p>
+            <ul className="flex flex-col gap-1">
+              {lostLayers.map((layer) => (
+                <LayerRow
+                  key={layer.key}
+                  layer={layer}
+                  checked={layers[layer.key]}
+                  onToggle={() => onToggleLayer(layer.key)}
+                />
+              ))}
+            </ul>
+          </>
+        )}
       </section>
     </>
   );
@@ -197,6 +215,7 @@ function FilterBody({
 
 const resultLayers = MAP_LAYERS.filter((l) => l.role === "result");
 const sourceLayers = MAP_LAYERS.filter((l) => l.role === "source");
+const lostLayers = MAP_LAYERS.filter((l) => l.role === "lost");
 
 /** A colour chip matching a layer's map swatch; `ring` keeps pale fills visible. */
 function LayerDot({ color }: { color: string }) {

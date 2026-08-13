@@ -14,6 +14,7 @@ const FILES = [
   "threatened_forests.geojson",
   "forest_all.geojson",
   "development_zones.geojson",
+  "deforested.geojson",
   "summary.json",
 ];
 

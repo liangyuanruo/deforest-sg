@@ -3,7 +3,7 @@
  * filter modal (toggles). Kept mapbox-free so importing it never drags the
  * WebGL bundle into a component that must stay server-renderable.
  */
-export type MapLayerKey = "forest" | "threatened" | "zones";
+export type MapLayerKey = "forest" | "threatened" | "zones" | "lost";
 export type MapLayerVisibility = Record<MapLayerKey, boolean>;
 
 /**
@@ -20,10 +20,11 @@ export interface MapLayerMeta {
   description: string;
   /**
    * "result" is the computed overlap (threatened forest); "source" is one of the
-   * two input layers it's derived from. Lets the filter panel show the derivation
-   * instead of presenting all three as unrelated peers.
+   * two input layers it's derived from; "lost" is forest already cleared (shown
+   * for contrast, not part of the overlap). Lets the filter panel group the layers
+   * by what they mean instead of presenting them as unrelated peers.
    */
-  role: "result" | "source";
+  role: "result" | "source" | "lost";
   /** Short, lowercase name used in the "forest ∩ zones = threatened" formula. */
   shortLabel: string;
 }
@@ -53,5 +54,13 @@ export const MAP_LAYERS: MapLayerMeta[] = [
     description: "Building-zoned land that touches forest (Master Plan 2025)",
     role: "source",
     shortLabel: "development zones",
+  },
+  {
+    key: "lost",
+    label: "Already lost",
+    swatch: "#71717a",
+    description: "Forest already cleared for development (Tengah, Dover East)",
+    role: "lost",
+    shortLabel: "already lost",
   },
 ];

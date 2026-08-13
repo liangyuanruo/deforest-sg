@@ -330,6 +330,55 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     return patches
 
 
+def annotate_deforested(deforested: gpd.GeoDataFrame, mp: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Annotate each already-cleared forest with its URA MP2025 zoning.
+
+    The two hand-traced polygons (Tengah Forest, Dover Forest East) are secondary
+    forest that has *already* been cleared for development. Unlike the threatened
+    overlay, we keep the original cleared footprint as geometry and only *read* the
+    masterplan beneath it: overlay against MP2025 to get the area-weighted dominant
+    land-use (LU_DESC) and the set of plot ratios (GPR) — the same attribute logic
+    aggregate_patches uses for threatened patches. Cost is bounded by these 2
+    polygons: an sjoin first narrows MP2025 to the handful of parcels they touch
+    (same pattern as involved_development_zones), then overlay runs on that subset.
+    """
+    d = deforested.copy()
+    d["id"] = range(len(d))
+    d["area_ha"] = (d.geometry.area / 1e4).round(4)
+
+    # Narrow MP2025 to the parcels the cleared areas actually touch, then overlay.
+    hit = gpd.sjoin(mp, d[["id", "geometry"]], predicate="intersects", how="inner")
+    mp_cand = mp[mp["OBJECTID"].isin(hit["OBJECTID"].unique())]
+    frag = gpd.overlay(
+        d[["id", "geometry"]],
+        mp_cand[["OBJECTID", "LU_DESC", "GPR", "geometry"]],
+        how="intersection",
+        keep_geom_type=True,
+    )
+    frag = frag[frag.geometry.notna() & ~frag.geometry.is_empty].copy()
+    frag["frag_area_ha"] = frag.geometry.area / 1e4
+
+    # Per cleared area: dominant (area-weighted) zoning + the set of plot ratios.
+    rows = []
+    for fid, grp in frag.groupby("id"):
+        by_lu = grp.groupby("LU_DESC")["frag_area_ha"].sum().sort_values(ascending=False)
+        gprs = sorted({str(g) for g in grp["GPR"].dropna().unique() if str(g).strip()})
+        rows.append({
+            "id": fid,
+            "dominant_lu_desc": by_lu.index[0] if len(by_lu) else None,
+            "lu_desc_breakdown": {k: round(float(v), 4) for k, v in by_lu.items()},
+            "gpr": ", ".join(gprs) if gprs else None,
+        })
+    agg = pd.DataFrame(rows, columns=["id", "dominant_lu_desc", "lu_desc_breakdown", "gpr"])
+    d = d.merge(agg, on="id", how="left")
+
+    d["source"] = "curated ∩ URA_MP2025"
+    rp = d.to_crs(WEB_CRS).geometry.representative_point()
+    d["centroid_lon"] = rp.x.round(6)
+    d["centroid_lat"] = rp.y.round(6)
+    return d
+
+
 # --------------------------------------------------------------------------- #
 # Validation
 # --------------------------------------------------------------------------- #
@@ -472,6 +521,10 @@ def main() -> None:
     localities = load_localities(mask)
     log(f"Localities for labelling: {len(localities):,}", t0)
 
+    deforested = gpd.read_file(DATA / "deforested.geojson", engine="pyogrio").to_crs(AREA_CRS)
+    deforested["geometry"] = deforested.geometry.make_valid()
+    log(f"Already-cleared forests loaded: {len(deforested):,}", t0)
+
     dev = mp[mp["LU_DESC"].isin(DEVELOPMENT_ZONES)].copy()
     frag = compute_threatened(forest, dev)
     log(f"Threatened fragments: {len(frag):,}, {frag['area_ha'].sum():,.1f} ha", t0)
@@ -481,6 +534,9 @@ def main() -> None:
 
     patches = aggregate_patches(frag, forest, localities)
     log(f"Threatened patches: {len(patches):,}", t0)
+
+    deforested_annot = annotate_deforested(deforested, mp)
+    log(f"Already-cleared forests annotated with MP2025 zoning: {len(deforested_annot):,}", t0)
 
     validation = validate(frag, forest)
     log(f"Validation overall_pass={validation['overall_pass']}", t0)
@@ -515,6 +571,18 @@ def main() -> None:
     zones_out = zones_out.rename(columns={"OBJECTID": "id", "LU_DESC": "lu_desc", "GPR": "gpr"})
     write_geojson(zones_out, RESULTS / "development_zones.geojson")
 
+    # 4. Already-cleared forests: the ORIGINAL cleared footprint, annotated with the
+    #    MP2025 zoning that replaced it (dominant land-use + plot ratio). Context only —
+    #    not part of the threatened overlay or the validation gate.
+    deforested_out = deforested_annot[[
+        "id", "name", "area_ha", "dominant_lu_desc", "lu_desc_breakdown", "gpr",
+        "centroid_lon", "centroid_lat", "source", "geometry",
+    ]].copy()
+    deforested_out["lu_desc_breakdown"] = deforested_out["lu_desc_breakdown"].apply(
+        lambda v: json.dumps(v) if isinstance(v, dict) else None
+    )
+    write_geojson(deforested_out, RESULTS / "deforested.geojson")
+
     summary = build_summary(patches, forest, frag, validation)
     summary["layers"] = [
         {"file": "threatened_forests.geojson", "source": "OSM_forest ∩ URA_MP2025",
@@ -526,12 +594,15 @@ def main() -> None:
         {"file": "development_zones.geojson", "source": "URA_MP2025",
          "geometry": "Polygon", "role": "URA development polygons overlapping forest (context)",
          "features": int(len(zones_out))},
+        {"file": "deforested.geojson", "source": "curated ∩ URA_MP2025",
+         "geometry": "MultiPolygon", "role": "already-cleared forest, annotated with MP2025 zoning (context)",
+         "features": int(len(deforested_out))},
     ]
     write_json(summary, RESULTS / "summary.json")
     write_json(validation, RESULTS / "validation.json")
 
     log(f"Wrote results/ (threatened_forests.geojson, forest_all.geojson, "
-        f"development_zones.geojson, summary.json, validation.json)", t0)
+        f"development_zones.geojson, deforested.geojson, summary.json, validation.json)", t0)
     log(f"DONE in {time.time()-t0:.1f}s", t0)
 
 

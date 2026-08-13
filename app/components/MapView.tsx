@@ -15,6 +15,7 @@ import {
 } from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
+  DeforestedFeatureCollection,
   DevelopmentZoneFeatureCollection,
   ForestFeatureCollection,
   ThreatenedFeatureCollection,
@@ -29,6 +30,8 @@ export interface MapViewProps {
   threatened: ThreatenedFeatureCollection | null;
   /** URA development zones (lazy-loaded; null until the layer is first enabled). */
   developmentZones: DevelopmentZoneFeatureCollection | null;
+  /** Forest already cleared (Tengah, Dover East), annotated with MP2025 zoning. */
+  deforested: DeforestedFeatureCollection | null;
   /** When non-null, only these threatened site ids are shown (search/filter result). */
   filteredIds: number[] | null;
   /** Currently selected site id (drives highlight + flyTo), or null. */
@@ -132,10 +135,16 @@ function standardBasemapConfig(theme: Theme) {
   return theme === "dark" ? STANDARD_BASEMAP_CONFIG_DARK : STANDARD_BASEMAP_CONFIG;
 }
 
-const SRC = { forest: "forest", threatened: "threatened", zones: "zones" } as const;
+const SRC = {
+  forest: "forest",
+  threatened: "threatened",
+  zones: "zones",
+  lost: "lost",
+} as const;
 const LYR = {
   forestFill: "forest-fill",
   zonesFill: "zones-fill",
+  lostFill: "lost-fill",
   threatFill: "threatened-fill",
 } as const;
 
@@ -146,6 +155,7 @@ function asFeatureCollection(
     | ForestFeatureCollection
     | ThreatenedFeatureCollection
     | DevelopmentZoneFeatureCollection
+    | DeforestedFeatureCollection
     | null,
 ): GeoJSON.FeatureCollection {
   return (fc ?? EMPTY_FC) as unknown as GeoJSON.FeatureCollection;
@@ -156,6 +166,43 @@ function escapeHtml(value: string): string {
     /[&<>"]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
   );
+}
+
+/**
+ * The URA-zoning rows shared by every popup that shows land use: a colour swatch +
+ * land-use label, a plain-language gloss, and the plot-ratio range + code legend.
+ * Reused by the vulnerable-forest and already-cleared popups so the two can't drift.
+ * All interpolated values are escaped.
+ */
+function zoningRowsHtml(
+  lu: string | null | undefined,
+  gpr: string | null | undefined,
+): string {
+  const luRow = lu
+    ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
+    : "";
+  // Plain-language gloss so the URA code is legible to non-planners.
+  const desc = lu ? descriptionForLandUse(lu) : undefined;
+  const descRow = desc
+    ? `<div class="deforest-popup__desc">${escapeHtml(desc)}</div>`
+    : "";
+  // Plot ratio: numeric density as a range + a compact code legend.
+  const parsed = parseGpr(gpr ?? null);
+  const gprRange = formatGprRange(parsed.ratios);
+  const gprCodes = parsed.codes
+    .map((c) => `${c}${GPR_CODE_LABEL[c] ? ` — ${GPR_CODE_LABEL[c]}` : ""}`)
+    .join(" · ");
+  const gprRow =
+    gprRange || gprCodes
+      ? `<div class="deforest-popup__gpr">Plot ratio${
+          gprRange ? ` ${escapeHtml(gprRange)}` : ""
+        }${
+          gprCodes
+            ? `<span class="deforest-popup__gprCodes">${escapeHtml(gprCodes)}</span>`
+            : ""
+        }</div>`
+      : "";
+  return luRow + descRow + gprRow;
 }
 
 function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | null {
@@ -192,6 +239,15 @@ const SOLID_FILL_OPACITY = 1;
 // Satellite-tuned opacities for the two context washes.
 const FOREST_FILL_OPACITY = 0.14;
 const ZONES_FILL_OPACITY = 0.28;
+
+// Already-cleared forests read as bleached "scars" of lost biodiversity: a
+// theme-flipped neutral (near-white on the dark app theme, dark grey on the light
+// one) so they stand out in both. Higher opacity than the context washes above so
+// they read as a solid loss, but still let the Satellite imagery show through.
+const LOST_FILL_OPACITY = 0.6;
+function lostFillColor(theme: Theme): string {
+  return theme === "dark" ? "#f4f4f5" : "#3f3f46";
+}
 
 function threatenedFillOpacity(mode: ColorMode, basemap: Basemap): unknown {
   if (basemap === "standard") return SOLID_FILL_OPACITY;
@@ -251,6 +307,11 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     data: asFeatureCollection(p.developmentZones),
     promoteId: "id",
   });
+  map.addSource(SRC.lost, {
+    type: "geojson",
+    data: asFeatureCollection(p.deforested),
+    promoteId: "id",
+  });
 
   // Every data fill is fully emissive so the Standard basemap's lighting model
   // (notably the dark `night` preset) can't mute it — the overlay reads at its
@@ -277,6 +338,21 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     paint: {
       "fill-color": landUseFillExpression("lu_desc") as never,
       "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
+      "fill-emissive-strength": 1,
+    },
+  });
+  // Already-cleared forests sit above the context washes but below the headline
+  // vulnerable-red fill. Theme-driven colour (near-white dark / dark-grey light) is
+  // set here and kept in sync by a dedicated theme effect. Sources/layers are
+  // re-added after every basemap swap, so reading p.theme here restores the right
+  // colour on each swap too.
+  map.addLayer({
+    id: LYR.lostFill,
+    type: "fill",
+    source: SRC.lost,
+    paint: {
+      "fill-color": lostFillColor(p.theme),
+      "fill-opacity": contextFillOpacity(basemap, LOST_FILL_OPACITY),
       "fill-emissive-strength": 1,
     },
   });
@@ -467,31 +543,7 @@ export function MapView(props: MapViewProps) {
           typeof pr?.area_ha === "number"
             ? formatFootballFields(pr.area_ha)
             : "";
-        const lu = pr?.dominant_lu_desc;
-        const luRow = lu
-          ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
-          : "";
-        // Plain-language gloss so the URA code is legible to non-planners.
-        const desc = lu ? descriptionForLandUse(lu) : undefined;
-        const descRow = desc
-          ? `<div class="deforest-popup__desc">${escapeHtml(desc)}</div>`
-          : "";
-        // Plot ratio: numeric density as a range + a compact code legend.
-        const gpr = parseGpr(pr?.gpr);
-        const gprRange = formatGprRange(gpr.ratios);
-        const gprCodes = gpr.codes
-          .map((c) => `${c}${GPR_CODE_LABEL[c] ? ` — ${GPR_CODE_LABEL[c]}` : ""}`)
-          .join(" · ");
-        const gprRow =
-          gprRange || gprCodes
-            ? `<div class="deforest-popup__gpr">Plot ratio${
-                gprRange ? ` ${escapeHtml(gprRange)}` : ""
-              }${
-                gprCodes
-                  ? `<span class="deforest-popup__gprCodes">${escapeHtml(gprCodes)}</span>`
-                  : ""
-              }</div>`
-            : "";
+        const zoning = zoningRowsHtml(pr?.dominant_lu_desc, pr?.gpr);
         popup
           .setLngLat(e.lngLat)
           .setHTML(
@@ -501,9 +553,7 @@ export function MapView(props: MapViewProps) {
                     fields ? ` · ${escapeHtml(fields)}` : ""
                   }</div>`
                 : "") +
-              luRow +
-              descRow +
-              gprRow +
+              zoning +
               `</div>`,
           )
           .addTo(map);
@@ -518,6 +568,43 @@ export function MapView(props: MapViewProps) {
           );
           hoveredRef.current = null;
         }
+        popup.remove();
+      });
+
+      // Already-cleared forests: a lighter popup — no feature-state highlight — that
+      // names the site, marks it "Cleared", and shows its area + the same URA-zoning
+      // rows (what replaced the forest) as the vulnerable-forest popup.
+      map.on("mousemove", LYR.lostFill, (e) => {
+        map.getCanvas().style.cursor = "pointer";
+        const pr = e.features?.[0]?.properties as {
+          name?: string;
+          area_ha?: number;
+          dominant_lu_desc?: string | null;
+          gpr?: string | null;
+        } | null;
+        const name = escapeHtml(pr?.name ?? "Cleared forest");
+        const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
+        const fields =
+          typeof pr?.area_ha === "number" ? formatFootballFields(pr.area_ha) : "";
+        const meta = [area && `${area}`, fields && escapeHtml(fields)]
+          .filter(Boolean)
+          .join(" · ");
+        const zoning = zoningRowsHtml(pr?.dominant_lu_desc, pr?.gpr);
+        popup
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div class="deforest-popup__body"><div class="deforest-popup__title">${name}</div>` +
+              `<div class="deforest-popup__meta">Cleared${
+                meta ? ` · ${meta}` : ""
+              }</div>` +
+              zoning +
+              `</div>`,
+          )
+          .addTo(map);
+      });
+
+      map.on("mouseleave", LYR.lostFill, () => {
+        map.getCanvas().style.cursor = "";
         popup.remove();
       });
 
@@ -562,6 +649,14 @@ export function MapView(props: MapViewProps) {
       asFeatureCollection(props.developmentZones),
     );
   }, [props.developmentZones]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    (map.getSource(SRC.lost) as mapboxgl.GeoJSONSource | undefined)?.setData(
+      asFeatureCollection(props.deforested),
+    );
+  }, [props.deforested]);
 
   // --- filter ------------------------------------------------------------
   useEffect(() => {
@@ -614,6 +709,15 @@ export function MapView(props: MapViewProps) {
     if (!map || !readyRef.current || basemap !== "standard") return;
     map.setConfig("basemap", standardBasemapConfig(props.theme));
   }, [props.theme, basemap]);
+
+  // --- theme: recolour the already-cleared fill live ---------------------
+  // The lost-forest fill flips near-white (dark app theme) / dark grey (light) so
+  // it stays a visible "scar" in both. A plain setPaintProperty — no style rebuild.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    map.setPaintProperty(LYR.lostFill, "fill-color", lostFillColor(props.theme));
+  }, [props.theme]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
   // setStyle replaces the whole style, dropping every custom source/layer and
@@ -792,5 +896,6 @@ function applyVisibility(map: mapboxgl.Map, layers: MapLayerVisibility) {
   const v = (on: boolean) => (on ? "visible" : "none");
   map.setLayoutProperty(LYR.forestFill, "visibility", v(layers.forest));
   map.setLayoutProperty(LYR.threatFill, "visibility", v(layers.threatened));
+  map.setLayoutProperty(LYR.lostFill, "visibility", v(layers.lost));
   // The zones layer is handled by syncZones.
 }

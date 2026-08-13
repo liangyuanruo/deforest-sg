@@ -69,6 +69,7 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
 | `threatened_forests.geojson` | `OSM_forest ∩ URA_MP2025` | **Headline result** — forest on development-zoned land, one feature per forest polygon, with name/locality, area, dominant land use, plot ratio, and curated context. |
 | `forest_all.geojson` | `OSM` | All mapped Singapore forest (threatened or not) — context base layer. |
 | `development_zones.geojson` | `URA_MP2025` | The MP2025 development polygons that overlap forest — the masterplan side, for context. |
+| `deforested.geojson` | `curated ∩ URA_MP2025` | Forest **already cleared** (Tengah Forest, Dover Forest East) — the original hand-traced footprint, annotated with the MP2025 zoning that replaced it (dominant land use + plot ratio). Context only; not part of the overlay or validation. |
 | `summary.json` | — | Totals, per-`LU_DESC` breakdown, ranked top sites, named forests, methodology, validation, caveats, and a `layers` manifest. |
 | `validation.json` | — | Maju Forest & Gillman Barracks recovery report + `overall_pass`. |
 

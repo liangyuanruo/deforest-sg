@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DeforestedFeatureCollectionSchema,
   DevelopmentZoneFeatureCollectionSchema,
   ForestFeatureCollectionSchema,
   SummarySchema,
@@ -183,6 +184,82 @@ describe("DevelopmentZoneFeatureCollectionSchema", () => {
     expect(() =>
       DevelopmentZoneFeatureCollectionSchema.parse(bad),
     ).toThrow();
+  });
+});
+
+describe("DeforestedFeatureCollectionSchema", () => {
+  // Mirrors results/deforested.geojson (Dover Forest East): the original cleared
+  // footprint annotated with the MP2025 zoning that replaced it.
+  const validFixture = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [] },
+        properties: {
+          id: 0,
+          name: "Dover Forest East",
+          area_ha: 8.6631,
+          dominant_lu_desc: "RESIDENTIAL",
+          lu_desc_breakdown: { RESIDENTIAL: 5.097, PARK: 0.3515 },
+          gpr: "3.4, 3.6, EVA, SDP",
+          centroid_lon: 103.780432,
+          centroid_lat: 1.311702,
+          source: "curated ∩ URA_MP2025",
+        },
+      },
+    ],
+  };
+
+  it("parses a valid fixture", () => {
+    const parsed = DeforestedFeatureCollectionSchema.parse(validFixture);
+    const props = parsed.features[0].properties;
+    expect(props.name).toBe("Dover Forest East");
+    expect(props.area_ha).toBeCloseTo(8.6631);
+    expect(props.dominant_lu_desc).toBe("RESIDENTIAL");
+    expect(props.gpr).toBe("3.4, 3.6, EVA, SDP");
+  });
+
+  it("allows null zoning (a cleared area outside all MP2025 polygons)", () => {
+    const withNullZoning = {
+      ...validFixture,
+      features: [
+        {
+          ...validFixture.features[0],
+          properties: {
+            ...validFixture.features[0].properties,
+            dominant_lu_desc: null,
+            lu_desc_breakdown: null,
+            gpr: null,
+          },
+        },
+      ],
+    };
+    const parsed = DeforestedFeatureCollectionSchema.parse(withNullZoning);
+    expect(parsed.features[0].properties.dominant_lu_desc).toBeNull();
+    expect(parsed.features[0].properties.gpr).toBeNull();
+  });
+
+  it("throws when the required name is missing", () => {
+    const bad = {
+      ...validFixture,
+      features: [
+        {
+          ...validFixture.features[0],
+          properties: {
+            id: 0,
+            area_ha: 8.6631,
+            dominant_lu_desc: "RESIDENTIAL",
+            lu_desc_breakdown: { RESIDENTIAL: 5.097 },
+            gpr: "3.4",
+            centroid_lon: 103.780432,
+            centroid_lat: 1.311702,
+            source: "curated ∩ URA_MP2025",
+          },
+        },
+      ],
+    };
+    expect(() => DeforestedFeatureCollectionSchema.parse(bad)).toThrow();
   });
 });
 

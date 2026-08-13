@@ -93,6 +93,36 @@ export const DevelopmentZoneFeatureCollectionSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// deforested.geojson — forest already cleared (Tengah, Dover East), the original
+// footprint annotated with the MP2025 zoning that replaced it. `dominant_lu_desc`
+// / `gpr` are nullable: a cleared area could fall outside all MP2025 polygons.
+// ---------------------------------------------------------------------------
+
+export const DeforestedPropertiesSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  area_ha: z.number(),
+  dominant_lu_desc: z.string().nullable(),
+  lu_desc_breakdown: z.record(z.string(), z.number()).nullable(),
+  gpr: z.string().nullable(),
+  centroid_lon: z.number(),
+  centroid_lat: z.number(),
+  source: z.string(),
+});
+
+export const DeforestedFeatureSchema = z.object({
+  type: z.literal("Feature"),
+  id: z.union([z.string(), z.number()]).optional(),
+  geometry: GeometrySchema,
+  properties: DeforestedPropertiesSchema,
+});
+
+export const DeforestedFeatureCollectionSchema = z.object({
+  type: z.literal("FeatureCollection"),
+  features: z.array(DeforestedFeatureSchema),
+});
+
+// ---------------------------------------------------------------------------
 // summary.json
 // ---------------------------------------------------------------------------
 
@@ -155,6 +185,12 @@ export type DevelopmentZoneFeature = z.infer<
 >;
 export type DevelopmentZoneFeatureCollection = z.infer<
   typeof DevelopmentZoneFeatureCollectionSchema
+>;
+
+export type DeforestedProperties = z.infer<typeof DeforestedPropertiesSchema>;
+export type DeforestedFeature = z.infer<typeof DeforestedFeatureSchema>;
+export type DeforestedFeatureCollection = z.infer<
+  typeof DeforestedFeatureCollectionSchema
 >;
 
 export type Totals = z.infer<typeof TotalsSchema>;

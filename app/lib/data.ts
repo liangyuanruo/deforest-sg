@@ -1,9 +1,11 @@
 import type { z } from "zod";
 import {
+  DeforestedFeatureCollectionSchema,
   DevelopmentZoneFeatureCollectionSchema,
   ForestFeatureCollectionSchema,
   SummarySchema,
   ThreatenedFeatureCollectionSchema,
+  type DeforestedFeatureCollection,
   type DevelopmentZoneFeatureCollection,
   type ForestFeatureCollection,
   type Summary,
@@ -64,6 +66,16 @@ export function fetchDevelopmentZones(
   return fetchAndParse(
     "/data/development_zones.geojson",
     DevelopmentZoneFeatureCollectionSchema,
+    options,
+  );
+}
+
+export function fetchDeforested(
+  options?: FetchOptions,
+): Promise<DeforestedFeatureCollection> {
+  return fetchAndParse(
+    "/data/deforested.geojson",
+    DeforestedFeatureCollectionSchema,
     options,
   );
 }

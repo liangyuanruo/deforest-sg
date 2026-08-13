@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  fetchDeforested,
   fetchDevelopmentZones,
   fetchForestAll,
   fetchSummary,
@@ -30,6 +31,7 @@ import { filterAndSortSites, landUseOptions } from "@/lib/scoring";
 import { forestPath } from "@/lib/share";
 import type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
 import type {
+  DeforestedFeatureCollection,
   DevelopmentZoneFeatureCollection,
   ForestFeatureCollection,
   Summary,
@@ -58,6 +60,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
   const [forest, setForest] = useState<ForestFeatureCollection | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [zones, setZones] = useState<DevelopmentZoneFeatureCollection | null>(null);
+  const [deforested, setDeforested] = useState<DeforestedFeatureCollection | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -67,6 +70,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
     forest: false,
     threatened: true,
     zones: false,
+    lost: true,
   });
   const [colorMode, setColorMode] = useState<ColorMode>("status");
   // Drives the Street basemap's day/night treatment; tracks the app theme so the
@@ -87,15 +91,17 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
     let active = true;
     (async () => {
       try {
-        const [t, f, s] = await Promise.all([
+        const [t, f, s, d] = await Promise.all([
           fetchThreatened(),
           fetchForestAll(),
           fetchSummary(),
+          fetchDeforested(),
         ]);
         if (!active) return;
         setThreatened(t);
         setForest(f);
         setSummary(s);
+        setDeforested(d);
       } catch (err) {
         if (active) {
           setLoadError(err instanceof Error ? err.message : "Failed to load data");
@@ -273,6 +279,7 @@ export function Explorer({ initialSelectedId = null }: ExplorerProps = {}) {
               forest={forest}
               threatened={threatened}
               developmentZones={zones}
+              deforested={deforested}
               filteredIds={filteredIds}
               selectedId={selectedId}
               onSelect={handleSelect}
