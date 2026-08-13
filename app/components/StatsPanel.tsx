@@ -25,11 +25,13 @@ import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
 /**
- * The threatened-forest layer's map identity (red swatch + label), reused as the
- * panel's map-key row so the key and the map can't drift. Non-null: the layer is
- * a fixed member of MAP_LAYERS.
+ * The map-key rows' identities (swatch + label), reused from MAP_LAYERS so the key
+ * and the map legend can't drift. Both non-null: fixed members of MAP_LAYERS. The
+ * "Deforested" scar is theme-flipped on the map (near-white / dark grey); its
+ * MAP_LAYERS swatch is the neutral mid-grey both the filter legend and this key use.
  */
 const THREATENED_KEY = MAP_LAYERS.find((l) => l.key === "threatened")!;
+const LOST_KEY = MAP_LAYERS.find((l) => l.key === "lost")!;
 
 export interface StatsPanelProps {
   /** Filtered live set of threatened sites. */
@@ -38,9 +40,9 @@ export interface StatsPanelProps {
   totalForestHa: number;
   /**
    * How the threatened layer is coloured on the map. In "status" mode every patch
-   * is the alarm red, so the panel shows a "Vulnerable forest" red key row; in
-   * "landuse" mode the patches take their zoning colours, which the breakdown
-   * below already keys, so the red row is omitted.
+   * is the alarm red, so the panel shows the map key ("Vulnerable forest" red +
+   * "Deforested" grey); in "landuse" mode both layers take their zoning colours,
+   * which the breakdown below already keys, so the key is omitted.
    */
   colorMode: ColorMode;
   className?: string;
@@ -179,11 +181,11 @@ export function StatsBreakdown({
   /** Suppress the "% of mapped forest" / "sites" figures — set by the mobile
    *  sheet, whose peek headline already shows them, to avoid repeating them. */
   hideFigures?: boolean;
-  /** Suppress the "Vulnerable forest" red map-key row — set by the mobile sheet.
-   *  That row appears only in "status" mode, so toggling colour mode would change
-   *  the sheet's content height and make the draggable sheet re-measure and
-   *  re-animate (a visible flicker). Omitting it keeps the sheet height stable
-   *  across the toggle; the peek headline already conveys the threatened layer. */
+  /** Suppress the map-key rows (vulnerable-forest red + deforested grey) — set by
+   *  the mobile sheet. They appear only in "status" mode, so toggling colour mode
+   *  would change the sheet's content height and make the draggable sheet
+   *  re-measure and re-animate (a visible flicker). Omitting them keeps the sheet
+   *  height stable across the toggle; the peek headline already conveys the layers. */
   hideStatusKey?: boolean;
 }) {
   const { threatenedHa, siteCount, fraction, slices } = useStatsAgg(
@@ -200,19 +202,16 @@ export function StatsBreakdown({
         </div>
       )}
 
-          {/* Map key. In "status" mode every threatened patch is the alarm red,
-              so this row is what the red on the map means. Omitted in "landuse"
-              mode, where the patches take the zoning colours the breakdown below
-              already keys. Sits in its own bordered zone (square swatch, unlike
-              the breakdown's round dots) so it doesn't read as a breakdown item. */}
+          {/* Map key. In "status" mode the threatened patches are the alarm red and
+              the already-cleared scars the neutral grey, so these rows say what each
+              colour on the map means. Omitted in "landuse" mode, where both layers
+              take the zoning colours the breakdown below already keys. Sits in its
+              own bordered zone (square swatches, unlike the breakdown's round dots)
+              so it doesn't read as a breakdown item. */}
           {colorMode === "status" && !hideStatusKey && (
-            <div className="flex items-center gap-2 border-t border-border/60 pt-2.5 text-[11px]">
-              <span
-                aria-hidden
-                className="size-2.5 shrink-0 rounded-sm ring-1 ring-border"
-                style={{ backgroundColor: THREATENED_KEY.swatch }}
-              />
-              <span className="text-foreground">{THREATENED_KEY.label}</span>
+            <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5 text-[11px]">
+              <MapKeyRow swatch={THREATENED_KEY.swatch} label={THREATENED_KEY.label} />
+              <MapKeyRow swatch={LOST_KEY.swatch} label={LOST_KEY.label} />
             </div>
           )}
 
@@ -282,6 +281,20 @@ export function StatsBreakdown({
               </ul>
             </div>
           )}
+    </div>
+  );
+}
+
+/** One map-key row: a square swatch (matching the map fill) + its layer label. */
+function MapKeyRow({ swatch, label }: { swatch: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        aria-hidden
+        className="size-2.5 shrink-0 rounded-sm ring-1 ring-border"
+        style={{ backgroundColor: swatch }}
+      />
+      <span className="text-foreground">{label}</span>
     </div>
   );
 }
