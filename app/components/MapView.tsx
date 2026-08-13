@@ -214,6 +214,22 @@ function zoningRowsHtml(
   return luRow + descRow + gprRow;
 }
 
+/**
+ * True on phone-width viewports — the same `(max-width: 639px)` boundary at which
+ * the draggable detail bottom-sheet (`MobileSheet`, `sm:hidden`) replaces the
+ * desktop panel. Evaluated per call (not cached) so it stays correct across
+ * rotation / resize / devtools emulation. Two map behaviours key on it: the
+ * flyTo padding (below), and popup suppression — on touch there's no true hover,
+ * so a tap fires a synthetic `mousemove`; the sheet already carries the tapped
+ * patch's details, so a lingering hover popup on top of it is just noise.
+ */
+function isMobileViewport(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 639px)").matches
+  );
+}
+
 function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | null {
   if (ids === null) return null;
   return ["in", ["get", "id"], ["literal", ids]] as unknown as mapboxgl.FilterSpecification;
@@ -434,10 +450,7 @@ function flyToPoint(map: mapboxgl.Map, lon: number, lat: number) {
   // screen-centred patch, so pad the bottom of the fly's framing box by the
   // sheet's coverage — the patch then frames in the visible upper half. Desktop
   // (sheet absent) uses no padding.
-  const isMobile =
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 639px)").matches;
-  const padding = isMobile
+  const padding = isMobileViewport()
     ? { bottom: Math.round(window.innerHeight * 0.45) }
     : undefined;
   map.flyTo({
@@ -581,6 +594,9 @@ export function MapView(props: MapViewProps) {
 
       // --- interaction (bound once; survives basemap style swaps) ---
       map.on("mousemove", LYR.threatFill, (e) => {
+        // On phones the bottom-sheet carries the tapped patch's details, so skip
+        // the hover popup (a tap fires a synthetic mousemove) — see isMobileViewport.
+        if (isMobileViewport()) return;
         map.getCanvas().style.cursor = "pointer";
         const feature = e.features?.[0];
         if (feature?.id == null) return;
@@ -640,6 +656,7 @@ export function MapView(props: MapViewProps) {
       // names the site, marks it "Cleared", and shows its area + the same URA-zoning
       // rows (what replaced the forest) as the vulnerable-forest popup.
       map.on("mousemove", LYR.lostFill, (e) => {
+        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
         map.getCanvas().style.cursor = "pointer";
         const pr = e.features?.[0]?.properties as {
           name?: string;
@@ -680,6 +697,7 @@ export function MapView(props: MapViewProps) {
       // zone wash, so defer to them when either is under the cursor — the more
       // specific patch wins; the zone speaks only for bare zoned land.
       map.on("mousemove", LYR.zonesFill, (e) => {
+        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
         const covered = map.queryRenderedFeatures(e.point, {
           layers: [LYR.threatFill, LYR.lostFill],
         });
@@ -715,6 +733,7 @@ export function MapView(props: MapViewProps) {
       // on top of (and, for threatened, entirely within) the forest, so defer to
       // any of them under the cursor: forest only speaks for bare forest.
       map.on("mousemove", LYR.forestFill, (e) => {
+        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
         const covered = map.queryRenderedFeatures(e.point, {
           layers: [LYR.threatFill, LYR.lostFill, LYR.zonesFill],
         });
