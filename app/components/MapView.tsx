@@ -673,6 +673,44 @@ export function MapView(props: MapViewProps) {
         popup.remove();
       });
 
+      // The base forest wash: a light popup naming the OSM patch + its area. Forest
+      // has no MP2025 zoning join (it's raw ground cover), so — unlike the two
+      // popups above — there are no land-use rows. The headline/cleared layers sit
+      // on top of (and, for threatened, entirely within) the forest, so defer to
+      // them when either is under the cursor: forest only speaks for bare forest.
+      map.on("mousemove", LYR.forestFill, (e) => {
+        const covered = map.queryRenderedFeatures(e.point, {
+          layers: [LYR.threatFill, LYR.lostFill],
+        });
+        if (covered.length) return;
+        const pr = e.features?.[0]?.properties as {
+          name?: string | null;
+          forest_area_ha?: number;
+        } | null;
+        const name = escapeHtml(pr?.name ?? "Unnamed forest");
+        const area =
+          typeof pr?.forest_area_ha === "number" ? formatHa(pr.forest_area_ha) : "";
+        const fields =
+          typeof pr?.forest_area_ha === "number"
+            ? formatFootballFields(pr.forest_area_ha)
+            : "";
+        const meta = ["Mapped forest", area, fields && escapeHtml(fields)]
+          .filter(Boolean)
+          .join(" · ");
+        popup
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div class="deforest-popup__body"><div class="deforest-popup__title">${name}</div>` +
+              `<div class="deforest-popup__meta">${meta}</div>` +
+              `</div>`,
+          )
+          .addTo(map);
+      });
+
+      map.on("mouseleave", LYR.forestFill, () => {
+        popup.remove();
+      });
+
       map.on("click", (e) => {
         const p = propsRef.current;
         // The headline vulnerable layer wins when it's under the cursor (it also
