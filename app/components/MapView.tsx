@@ -641,7 +641,7 @@ export function MapView(props: MapViewProps) {
           .setLngLat(e.lngLat)
           .setHTML(
             `<div class="deforest-popup__body"><div class="deforest-popup__title">${name}</div>` +
-              `<div class="deforest-popup__meta">Cleared${
+              `<div class="deforest-popup__meta">Deforested${
                 meta ? ` · ${meta}` : ""
               }</div>` +
               zoning +
