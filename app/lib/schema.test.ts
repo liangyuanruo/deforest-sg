@@ -97,6 +97,7 @@ describe("ForestFeatureCollectionSchema", () => {
         properties: {
           id: 20566008,
           name: null,
+          label: "Forest near Changi Village",
           forest_area_ha: 0.14212688805007853,
           source_layer: "natural",
           source: "OSM",
@@ -108,6 +109,8 @@ describe("ForestFeatureCollectionSchema", () => {
   it("parses a valid fixture", () => {
     const parsed = ForestFeatureCollectionSchema.parse(validFixture);
     expect(parsed.features[0].properties.name).toBeNull();
+    // Unnamed patch still carries a human label ("Forest near <locality>").
+    expect(parsed.features[0].properties.label).toBe("Forest near Changi Village");
     expect(parsed.features[0].properties.forest_area_ha).toBeCloseTo(
       0.14212688805007853,
     );

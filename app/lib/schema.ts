@@ -51,6 +51,9 @@ export const ThreatenedFeatureCollectionSchema = z.object({
 export const ForestPropertiesSchema = z.object({
   id: z.number().int(),
   name: z.string().nullable(),
+  /** Display label: the OSM name, else "Forest near <nearest locality>" — the
+   *  same rule the threatened layer uses, so an unnamed patch reads identically. */
+  label: z.string(),
   forest_area_ha: z.number(),
   source_layer: z.string(),
   source: z.string(),

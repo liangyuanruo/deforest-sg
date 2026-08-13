@@ -265,6 +265,28 @@ def involved_development_zones(forest: gpd.GeoDataFrame, dev: gpd.GeoDataFrame) 
     return zones
 
 
+def forest_label(name, locality) -> str:
+    """Display label for a forest polygon: the OSM name if present, else
+    "Forest near <nearest locality>". Shared by the threatened patches and the
+    all-forest context layer so an unnamed patch reads identically in both."""
+    nm = (name or "").strip() if isinstance(name, str) else ""
+    if nm:
+        return nm
+    loc = locality if isinstance(locality, str) and locality else "unknown area"
+    return f"Forest near {loc}"
+
+
+def attach_nearest_locality(gdf: gpd.GeoDataFrame,
+                            localities: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Merge a `locality` column: the name of the nearest OSM place point to each
+    polygon's representative point. Keyed on osm_id; used to label unnamed forest."""
+    cent = gdf[["osm_id", "geometry"]].copy()
+    cent["geometry"] = cent.geometry.representative_point()
+    cent = gpd.sjoin_nearest(cent, localities, how="left")
+    cent = cent.drop_duplicates("osm_id").set_index("osm_id")["locality"]
+    return gdf.merge(cent.rename("locality"), on="osm_id", how="left")
+
+
 def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
                       localities: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Aggregate threatened fragments to one record per forest polygon (osm_id)."""
@@ -295,21 +317,12 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     patches["threatened_fraction"] = (patches["area_ha"] / patches["forest_area_ha"]).clip(upper=1.0).round(4)
 
     # Nearest locality label (computed on threatened geometry centroids).
-    cent = patches.copy()
-    cent["geometry"] = cent.geometry.representative_point()
-    cent = gpd.sjoin_nearest(cent[["osm_id", "geometry"]], localities, how="left")
-    cent = cent.drop_duplicates("osm_id").set_index("osm_id")["locality"]
-    patches = patches.merge(cent.rename("locality"), on="osm_id", how="left")
+    patches = attach_nearest_locality(patches, localities)
 
     # Human label + curated context.
-    def make_label(r):
-        nm = (r["name"] or "").strip() if isinstance(r["name"], str) else ""
-        if nm:
-            return nm
-        loc = r["locality"] if isinstance(r["locality"], str) and r["locality"] else "unknown area"
-        return f"Forest near {loc}"
-
-    patches["label"] = patches.apply(make_label, axis=1)
+    patches["label"] = patches.apply(
+        lambda r: forest_label(r["name"], r["locality"]), axis=1
+    )
     ctx = patches["name"].apply(context_for_name)
     patches["context"] = ctx.apply(lambda c: c["context"] if c else None)
     patches["wildlife"] = ctx.apply(lambda c: c.get("wildlife") if c else None)
@@ -566,7 +579,16 @@ def main() -> None:
     write_geojson(threat_out, RESULTS / "threatened_forests.geojson")
 
     # 2. OSM source geometry: ALL Singapore forest (threatened or not), for context.
-    forest_out = forest[["osm_id", "name", "forest_area_ha", "source_layer", "geometry"]].copy()
+    # Carry the same human label as the threatened layer — the OSM name, else
+    # "Forest near <nearest locality>" — so the map popup names an unnamed patch
+    # by its area instead of a bare "Unnamed forest".
+    forest_labeled = attach_nearest_locality(forest, localities)
+    forest_labeled["label"] = forest_labeled.apply(
+        lambda r: forest_label(r["name"], r["locality"]), axis=1
+    )
+    forest_out = forest_labeled[
+        ["osm_id", "name", "label", "forest_area_ha", "source_layer", "geometry"]
+    ].copy()
     forest_out["source"] = "OSM"
     forest_out = forest_out.rename(columns={"osm_id": "id"})
     write_geojson(forest_out, RESULTS / "forest_all.geojson")

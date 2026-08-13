@@ -684,10 +684,10 @@ export function MapView(props: MapViewProps) {
         });
         if (covered.length) return;
         const pr = e.features?.[0]?.properties as {
-          name?: string | null;
+          label?: string;
           forest_area_ha?: number;
         } | null;
-        const name = escapeHtml(pr?.name ?? "Unnamed forest");
+        const name = escapeHtml(pr?.label ?? "Mapped forest");
         const area =
           typeof pr?.forest_area_ha === "number" ? formatHa(pr.forest_area_ha) : "";
         const fields =
