@@ -10,6 +10,7 @@ import {
   describeThreatenedPopup,
   describeZonePopup,
   popupViewToHtml,
+  type PopupView,
 } from "@/lib/feature-view";
 import type { Theme } from "@/components/ThemeToggle";
 import {
@@ -451,6 +452,120 @@ function flyToSelectedLost(
 }
 
 /**
+ * Per-layer hover behaviour, declared once so the four layers can't drift on it —
+ * which is exactly how the pointer cursor ended up set on only two of four
+ * hand-written handlers. `cursor` shows the pointer (and resets it on leave);
+ * `coveredBy` defers to layers painted on top (the more specific patch wins);
+ * `featureStateHover` toggles the `{hover}` feature-state the threatened paint reads.
+ */
+interface HoverBinding {
+  layer: string;
+  source: string;
+  describe: (props: unknown) => PopupView;
+  cursor: boolean;
+  coveredBy: string[];
+  featureStateHover: boolean;
+  /**
+   * Show this layer's popup on a phone *tap* (there's no hover on touch). True for
+   * the non-selectable context layers (zones, forest) whose only affordance is the
+   * popup; the selectable layers (threatened, cleared) open the detail sheet instead.
+   */
+  peekable: boolean;
+}
+
+const HOVER_BINDINGS: HoverBinding[] = [
+  {
+    layer: LYR.threatFill,
+    source: SRC.threatened,
+    describe: (p) => describeThreatenedPopup(p as ThreatenedProperties),
+    cursor: true,
+    coveredBy: [],
+    featureStateHover: true,
+    peekable: false,
+  },
+  {
+    layer: LYR.lostFill,
+    source: SRC.lost,
+    describe: (p) => describeDeforestedPopup(p as DeforestedProperties),
+    cursor: true,
+    coveredBy: [],
+    featureStateHover: false,
+    peekable: false,
+  },
+  {
+    layer: LYR.zonesFill,
+    source: SRC.zones,
+    describe: (p) => describeZonePopup(p as DevelopmentZoneProperties),
+    // A popup appears on hover, so signal interactivity like the other layers —
+    // even though zones aren't selectable (on phones a tap peeks; see the click
+    // handler). Fixes the drift where only threatened/cleared showed the pointer.
+    cursor: true,
+    coveredBy: [LYR.threatFill, LYR.lostFill],
+    featureStateHover: false,
+    peekable: true,
+  },
+  {
+    layer: LYR.forestFill,
+    source: SRC.forest,
+    describe: (p) => describeForestPopup(p as ForestProperties),
+    cursor: true,
+    coveredBy: [LYR.threatFill, LYR.lostFill, LYR.zonesFill],
+    featureStateHover: false,
+    peekable: true,
+  },
+];
+
+/**
+ * Binds one layer's hover popup + cursor + feature-state highlight from its
+ * {@link HoverBinding}. On phones there's no true hover (a tap fires a synthetic
+ * mousemove) and the bottom sheet carries the detail, so popups are suppressed —
+ * see isMobileViewport. Feature properties are validated at load by lib/data and
+ * preserved verbatim by the GeoJSON source, so `describe` casts them to its schema type.
+ */
+function bindHover(
+  map: mapboxgl.Map,
+  popup: mapboxgl.Popup,
+  binding: HoverBinding,
+  hoveredRef: { current: number | null },
+): void {
+  map.on("mousemove", binding.layer, (e) => {
+    if (isMobileViewport()) return;
+    // Defer to any layer painted on top: it speaks for the point, not this one.
+    if (
+      binding.coveredBy.length &&
+      map.queryRenderedFeatures(e.point, { layers: binding.coveredBy }).length
+    ) {
+      return;
+    }
+    if (binding.cursor) map.getCanvas().style.cursor = "pointer";
+    const feature = e.features?.[0];
+    if (!feature) return;
+    if (binding.featureStateHover) {
+      if (feature.id == null) return;
+      const id = Number(feature.id);
+      if (hoveredRef.current !== null && hoveredRef.current !== id) {
+        map.setFeatureState({ source: binding.source, id: hoveredRef.current }, { hover: false });
+      }
+      hoveredRef.current = id;
+      map.setFeatureState({ source: binding.source, id }, { hover: true });
+    }
+    popup
+      .setLngLat(e.lngLat)
+      .setHTML(popupViewToHtml(binding.describe(feature.properties)))
+      .addTo(map);
+  });
+
+  map.on("mouseleave", binding.layer, () => {
+    if (binding.cursor) map.getCanvas().style.cursor = "";
+    if (binding.featureStateHover && hoveredRef.current !== null) {
+      map.setFeatureState({ source: binding.source, id: hoveredRef.current }, { hover: false });
+      hoveredRef.current = null;
+    }
+    popup.remove();
+  });
+}
+
+/**
  * Imperative Mapbox GL map. The map object lives outside React's render cycle
  * (in refs); props are mirrored into `propsRef` so the one-time `load` handler
  * always sees the latest data, and dedicated effects push prop changes into the
@@ -554,111 +669,18 @@ export function MapView(props: MapViewProps) {
       flyToSelectedLost(map, p.deforested, p.selectedLostId);
 
       // --- interaction (bound once; survives basemap style swaps) ---
-      map.on("mousemove", LYR.threatFill, (e) => {
-        // On phones the bottom-sheet carries the tapped patch's details, so skip
-        // the hover popup (a tap fires a synthetic mousemove) — see isMobileViewport.
-        if (isMobileViewport()) return;
-        map.getCanvas().style.cursor = "pointer";
-        const feature = e.features?.[0];
-        if (feature?.id == null) return;
-        const id = Number(feature.id);
-        if (hoveredRef.current !== null && hoveredRef.current !== id) {
-          map.setFeatureState(
-            { source: SRC.threatened, id: hoveredRef.current },
-            { hover: false },
-          );
-        }
-        hoveredRef.current = id;
-        map.setFeatureState({ source: SRC.threatened, id }, { hover: true });
-
-        // Validated at load by lib/data (schema.parse) and preserved verbatim by
-        // the GeoJSON source, so the feature carries ThreatenedProperties.
-        const pr = feature.properties as unknown as ThreatenedProperties;
-        popup
-          .setLngLat(e.lngLat)
-          .setHTML(popupViewToHtml(describeThreatenedPopup(pr)))
-          .addTo(map);
-      });
-
-      map.on("mouseleave", LYR.threatFill, () => {
-        map.getCanvas().style.cursor = "";
-        if (hoveredRef.current !== null) {
-          map.setFeatureState(
-            { source: SRC.threatened, id: hoveredRef.current },
-            { hover: false },
-          );
-          hoveredRef.current = null;
-        }
-        popup.remove();
-      });
-
-      // Already-cleared forests: a lighter popup — no feature-state highlight — that
-      // names the site, marks it "Deforested", and shows its area + the same URA-zoning
-      // rows (what replaced the forest) as the vulnerable-forest popup. See
-      // describeDeforestedPopup in lib/feature-view for the content.
-      map.on("mousemove", LYR.lostFill, (e) => {
-        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
-        map.getCanvas().style.cursor = "pointer";
-        const pr = e.features?.[0]?.properties as unknown as DeforestedProperties;
-        popup
-          .setLngLat(e.lngLat)
-          .setHTML(popupViewToHtml(describeDeforestedPopup(pr)))
-          .addTo(map);
-      });
-
-      map.on("mouseleave", LYR.lostFill, () => {
-        map.getCanvas().style.cursor = "";
-        popup.remove();
-      });
-
-      // URA development zone: the masterplan parcel that touches forest, named by
-      // its intended land use. Reuses the shared zoning rows verbatim (swatch +
-      // land-use label, plain-language gloss, plot ratio) under a generic header,
-      // with the parcel's own area. The headline/cleared fills paint on top of the
-      // zone wash, so defer to them when either is under the cursor — the more
-      // specific patch wins; the zone speaks only for bare zoned land.
-      map.on("mousemove", LYR.zonesFill, (e) => {
-        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
-        const covered = map.queryRenderedFeatures(e.point, {
-          layers: [LYR.threatFill, LYR.lostFill],
-        });
-        if (covered.length) return;
-        const pr = e.features?.[0]
-          ?.properties as unknown as DevelopmentZoneProperties;
-        popup
-          .setLngLat(e.lngLat)
-          .setHTML(popupViewToHtml(describeZonePopup(pr)))
-          .addTo(map);
-      });
-
-      map.on("mouseleave", LYR.zonesFill, () => {
-        popup.remove();
-      });
-
-      // The base forest wash: a light popup naming the OSM patch + its area. Forest
-      // has no MP2025 zoning join (it's raw ground cover), so — unlike the popups
-      // above — there are no land-use rows. The zone/cleared/headline fills all sit
-      // on top of (and, for threatened, entirely within) the forest, so defer to
-      // any of them under the cursor: forest only speaks for bare forest.
-      map.on("mousemove", LYR.forestFill, (e) => {
-        if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
-        const covered = map.queryRenderedFeatures(e.point, {
-          layers: [LYR.threatFill, LYR.lostFill, LYR.zonesFill],
-        });
-        if (covered.length) return;
-        const pr = e.features?.[0]?.properties as unknown as ForestProperties;
-        popup
-          .setLngLat(e.lngLat)
-          .setHTML(popupViewToHtml(describeForestPopup(pr)))
-          .addTo(map);
-      });
-
-      map.on("mouseleave", LYR.forestFill, () => {
-        popup.remove();
-      });
+      // Hover popup + cursor + highlight per layer, driven by HOVER_BINDINGS so
+      // the four layers can't drift (see bindHover). Click/selection is separate,
+      // below — only the threatened + cleared layers are selectable.
+      for (const binding of HOVER_BINDINGS) bindHover(map, popup, binding, hoveredRef);
 
       map.on("click", (e) => {
         const p = propsRef.current;
+        // On phones there's no hover, so a tap is the only affordance. Clear any
+        // prior peek popup up front; a selectable hit opens the sheet (below), and
+        // a bare zone/forest tap shows its transient peek popup (further below).
+        const mobile = isMobileViewport();
+        if (mobile) popup.remove();
         // The headline vulnerable layer wins when it's under the cursor (it also
         // renders on top); otherwise fall to an already-cleared scar; an empty
         // click clears both. queryRenderedFeatures skips hidden layers, so a
@@ -707,6 +729,24 @@ export function MapView(props: MapViewProps) {
           }
           p.onSelectLost(uid);
           return;
+        }
+        // Phones only: a bare development-zone / forest tap has no selectable card,
+        // so show its info in the transient popup — the touch equivalent of the
+        // desktop hover popover (restores what suppressing mobile hover removed).
+        // HOVER_BINDINGS is in cover order, so zones win over forest.
+        if (mobile) {
+          for (const b of HOVER_BINDINGS) {
+            if (!b.peekable) continue;
+            const props = map.queryRenderedFeatures(e.point, { layers: [b.layer] })[0]
+              ?.properties;
+            if (props) {
+              popup
+                .setLngLat(e.lngLat)
+                .setHTML(popupViewToHtml(b.describe(props)))
+                .addTo(map);
+              return;
+            }
+          }
         }
         p.onSelect(null);
         p.onSelectLost(null);
