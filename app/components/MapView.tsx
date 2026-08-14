@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
-import { formatFootballFields, formatHa } from "@/lib/format";
 import {
-  describeZoning,
-  escapeHtml,
-  zoningViewToHtml,
+  describeDeforestedPopup,
+  describeForestPopup,
+  describeThreatenedPopup,
+  describeZonePopup,
+  popupViewToHtml,
 } from "@/lib/feature-view";
 import type { Theme } from "@/components/ThemeToggle";
 import {
@@ -20,9 +21,13 @@ import { landUseFillExpression } from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
   DeforestedFeatureCollection,
+  DeforestedProperties,
   DevelopmentZoneFeatureCollection,
+  DevelopmentZoneProperties,
   ForestFeatureCollection,
+  ForestProperties,
   ThreatenedFeatureCollection,
+  ThreatenedProperties,
 } from "@/lib/schema";
 
 export type { ColorMode, MapLayerKey, MapLayerVisibility } from "@/lib/layers";
@@ -566,35 +571,12 @@ export function MapView(props: MapViewProps) {
         hoveredRef.current = id;
         map.setFeatureState({ source: SRC.threatened, id }, { hover: true });
 
-        const pr = feature.properties as {
-          label?: string;
-          area_ha?: number;
-          dominant_lu_desc?: string;
-          gpr?: string | null;
-        } | null;
-        const label = escapeHtml(pr?.label ?? "Forest patch");
-        const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
-        // A football-field comparison makes the hectare figure picturable — the
-        // same secondary line the site card carries.
-        const fields =
-          typeof pr?.area_ha === "number"
-            ? formatFootballFields(pr.area_ha)
-            : "";
-        const zoning = zoningViewToHtml(
-          describeZoning(pr?.dominant_lu_desc, pr?.gpr),
-        );
+        // Validated at load by lib/data (schema.parse) and preserved verbatim by
+        // the GeoJSON source, so the feature carries ThreatenedProperties.
+        const pr = feature.properties as unknown as ThreatenedProperties;
         popup
           .setLngLat(e.lngLat)
-          .setHTML(
-            `<div class="deforest-popup__body"><div class="deforest-popup__title">${label}</div>` +
-              (area
-                ? `<div class="deforest-popup__meta">${area} vulnerable${
-                    fields ? ` · ${escapeHtml(fields)}` : ""
-                  }</div>`
-                : "") +
-              zoning +
-              `</div>`,
-          )
+          .setHTML(popupViewToHtml(describeThreatenedPopup(pr)))
           .addTo(map);
       });
 
@@ -611,37 +593,16 @@ export function MapView(props: MapViewProps) {
       });
 
       // Already-cleared forests: a lighter popup — no feature-state highlight — that
-      // names the site, marks it "Cleared", and shows its area + the same URA-zoning
-      // rows (what replaced the forest) as the vulnerable-forest popup.
+      // names the site, marks it "Deforested", and shows its area + the same URA-zoning
+      // rows (what replaced the forest) as the vulnerable-forest popup. See
+      // describeDeforestedPopup in lib/feature-view for the content.
       map.on("mousemove", LYR.lostFill, (e) => {
         if (isMobileViewport()) return; // sheet covers it on phones — see threatFill.
         map.getCanvas().style.cursor = "pointer";
-        const pr = e.features?.[0]?.properties as {
-          name?: string;
-          area_ha?: number;
-          dominant_lu_desc?: string | null;
-          gpr?: string | null;
-        } | null;
-        const name = escapeHtml(pr?.name ?? "Cleared forest");
-        const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
-        const fields =
-          typeof pr?.area_ha === "number" ? formatFootballFields(pr.area_ha) : "";
-        const meta = [area && `${area}`, fields && escapeHtml(fields)]
-          .filter(Boolean)
-          .join(" · ");
-        const zoning = zoningViewToHtml(
-          describeZoning(pr?.dominant_lu_desc, pr?.gpr),
-        );
+        const pr = e.features?.[0]?.properties as unknown as DeforestedProperties;
         popup
           .setLngLat(e.lngLat)
-          .setHTML(
-            `<div class="deforest-popup__body"><div class="deforest-popup__title">${name}</div>` +
-              `<div class="deforest-popup__meta">Deforested${
-                meta ? ` · ${meta}` : ""
-              }</div>` +
-              zoning +
-              `</div>`,
-          )
+          .setHTML(popupViewToHtml(describeDeforestedPopup(pr)))
           .addTo(map);
       });
 
@@ -662,24 +623,11 @@ export function MapView(props: MapViewProps) {
           layers: [LYR.threatFill, LYR.lostFill],
         });
         if (covered.length) return;
-        const pr = e.features?.[0]?.properties as {
-          lu_desc?: string | null;
-          gpr?: string | null;
-          area_ha?: number;
-        } | null;
-        const area = typeof pr?.area_ha === "number" ? formatHa(pr.area_ha) : "";
-        const fields =
-          typeof pr?.area_ha === "number" ? formatFootballFields(pr.area_ha) : "";
-        const meta = [area, fields && escapeHtml(fields)].filter(Boolean).join(" · ");
-        const zoning = zoningViewToHtml(describeZoning(pr?.lu_desc, pr?.gpr));
+        const pr = e.features?.[0]
+          ?.properties as unknown as DevelopmentZoneProperties;
         popup
           .setLngLat(e.lngLat)
-          .setHTML(
-            `<div class="deforest-popup__body"><div class="deforest-popup__title">Development zone</div>` +
-              (meta ? `<div class="deforest-popup__meta">${meta}</div>` : "") +
-              zoning +
-              `</div>`,
-          )
+          .setHTML(popupViewToHtml(describeZonePopup(pr)))
           .addTo(map);
       });
 
@@ -698,27 +646,10 @@ export function MapView(props: MapViewProps) {
           layers: [LYR.threatFill, LYR.lostFill, LYR.zonesFill],
         });
         if (covered.length) return;
-        const pr = e.features?.[0]?.properties as {
-          label?: string;
-          forest_area_ha?: number;
-        } | null;
-        const name = escapeHtml(pr?.label ?? "Mapped forest");
-        const area =
-          typeof pr?.forest_area_ha === "number" ? formatHa(pr.forest_area_ha) : "";
-        const fields =
-          typeof pr?.forest_area_ha === "number"
-            ? formatFootballFields(pr.forest_area_ha)
-            : "";
-        const meta = [area, fields && escapeHtml(fields)]
-          .filter(Boolean)
-          .join(" · ");
+        const pr = e.features?.[0]?.properties as unknown as ForestProperties;
         popup
           .setLngLat(e.lngLat)
-          .setHTML(
-            `<div class="deforest-popup__body"><div class="deforest-popup__title">${name}</div>` +
-              `<div class="deforest-popup__meta">${meta}</div>` +
-              `</div>`,
-          )
+          .setHTML(popupViewToHtml(describeForestPopup(pr)))
           .addTo(map);
       });
 

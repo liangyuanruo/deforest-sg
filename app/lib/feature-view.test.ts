@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { describeZoning, escapeHtml, zoningViewToHtml } from "@/lib/feature-view";
+import {
+  describeDeforestedPopup,
+  describeForestPopup,
+  describeThreatenedPopup,
+  describeZoning,
+  describeZonePopup,
+  escapeHtml,
+  popupViewToHtml,
+  zoningViewToHtml,
+} from "@/lib/feature-view";
 
 /**
  * `describeZoning` is the single source of truth for the URA-zoning facts shown
@@ -98,6 +107,97 @@ describe("escapeHtml", () => {
   it("escapes the HTML-significant characters", () => {
     expect(escapeHtml('a & b < c > d "e"')).toBe(
       "a &amp; b &lt; c &gt; d &quot;e&quot;",
+    );
+  });
+});
+
+/**
+ * Per-layer popup view-models. Each pins the title + secondary meta line + which
+ * zoning rows (if any) a popup shows; the shared zoning HTML is composed from the
+ * already-tested `zoningViewToHtml`, so these tests own only the popup-specific
+ * decisions. Together with `popupViewToHtml` they reproduce the pre-seam inline
+ * MapView builders byte-for-byte for schema-valid features.
+ */
+describe("popup view-models", () => {
+  it("threatened: label title, '<area> vulnerable' meta, and zoning rows", () => {
+    const view = describeThreatenedPopup({
+      label: "Maju Forest",
+      area_ha: 21.7,
+      dominant_lu_desc: "RESIDENTIAL",
+      gpr: "1.6, 2.8",
+    });
+    expect(view).toEqual({
+      title: "Maju Forest",
+      meta: "21.7 ha vulnerable · ≈ 31 football fields",
+      zoning: describeZoning("RESIDENTIAL", "1.6, 2.8"),
+    });
+    expect(popupViewToHtml(view)).toBe(
+      '<div class="deforest-popup__body"><div class="deforest-popup__title">Maju Forest</div>' +
+        '<div class="deforest-popup__meta">21.7 ha vulnerable · ≈ 31 football fields</div>' +
+        zoningViewToHtml(describeZoning("RESIDENTIAL", "1.6, 2.8")) +
+        "</div>",
+    );
+  });
+
+  it("forest: label title, area meta, and no zoning rows (raw ground cover)", () => {
+    const view = describeForestPopup({
+      label: "Forest near Simpang",
+      forest_area_ha: 5,
+    });
+    expect(view).toEqual({
+      title: "Forest near Simpang",
+      meta: "5.0 ha · ≈ 7 football fields",
+      zoning: null,
+    });
+    expect(popupViewToHtml(view)).toBe(
+      '<div class="deforest-popup__body"><div class="deforest-popup__title">Forest near Simpang</div>' +
+        '<div class="deforest-popup__meta">5.0 ha · ≈ 7 football fields</div>' +
+        "</div>",
+    );
+  });
+
+  it("zone: generic 'Development zone' title, area meta, and zoning rows", () => {
+    const view = describeZonePopup({
+      lu_desc: "BUSINESS 2",
+      gpr: "2.5",
+      area_ha: 12,
+    });
+    expect(view).toEqual({
+      title: "Development zone",
+      meta: "12.0 ha · ≈ 17 football fields",
+      zoning: describeZoning("BUSINESS 2", "2.5"),
+    });
+  });
+
+  it("deforested: name title, 'Deforested · …' meta, empty zoning when unzoned", () => {
+    const view = describeDeforestedPopup({
+      name: "Tengah Forest",
+      area_ha: 100,
+      dominant_lu_desc: null,
+      gpr: null,
+    });
+    expect(view).toEqual({
+      title: "Tengah Forest",
+      meta: "Deforested · 100.0 ha · ≈ 140 football fields",
+      zoning: describeZoning(null, null),
+    });
+    // A cleared area outside every MP2025 polygon carries no zoning rows.
+    expect(popupViewToHtml(view)).toBe(
+      '<div class="deforest-popup__body"><div class="deforest-popup__title">Tengah Forest</div>' +
+        '<div class="deforest-popup__meta">Deforested · 100.0 ha · ≈ 140 football fields</div>' +
+        "</div>",
+    );
+  });
+});
+
+describe("popupViewToHtml", () => {
+  it("escapes the title and meta and omits the meta div when meta is null", () => {
+    expect(popupViewToHtml({ title: "A & B", meta: "x < y", zoning: null })).toBe(
+      '<div class="deforest-popup__body"><div class="deforest-popup__title">A &amp; B</div>' +
+        '<div class="deforest-popup__meta">x &lt; y</div></div>',
+    );
+    expect(popupViewToHtml({ title: "T", meta: null, zoning: null })).toBe(
+      '<div class="deforest-popup__body"><div class="deforest-popup__title">T</div></div>',
     );
   });
 });

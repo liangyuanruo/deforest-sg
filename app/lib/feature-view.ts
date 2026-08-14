@@ -10,6 +10,7 @@
  * their own density — the hover popup stays terse, the card stays verbose — but
  * they can no longer disagree on the underlying facts.
  */
+import { formatFootballFields, formatHa } from "@/lib/format";
 import {
   formatGprRange,
   GPR_CODE_DESCRIPTION,
@@ -17,6 +18,12 @@ import {
   parseGpr,
 } from "@/lib/gpr";
 import { colorForLandUse, descriptionForLandUse } from "@/lib/landuse";
+import type {
+  DeforestedProperties,
+  DevelopmentZoneProperties,
+  ForestProperties,
+  ThreatenedProperties,
+} from "@/lib/schema";
 
 /** Escapes the HTML-significant characters for safe interpolation into popup markup. */
 export function escapeHtml(value: string): string {
@@ -94,4 +101,76 @@ export function zoningViewToHtml(z: ZoningView): string {
         }</div>`
       : "";
   return luRow + descRow + gprRow;
+}
+
+/**
+ * A map hover popup's content: a title, an optional secondary meta line (area +
+ * football-field equivalent), and the shared zoning rows (`null` for raw forest,
+ * which has no MP2025 join). Feeds {@link popupViewToHtml}. The `describe*Popup`
+ * builders below read schema-typed feature properties — the collections are
+ * validated by `lib/data` before they reach the map, so the fields these read are
+ * present (no defensive fallbacks), unlike the old inline `feature.properties` casts.
+ */
+export interface PopupView {
+  title: string;
+  meta: string | null;
+  zoning: ZoningView | null;
+}
+
+/** `<area> · <football fields>`, the secondary line shared by every popup. */
+function areaMeta(areaHa: number): string {
+  return `${formatHa(areaHa)} · ${formatFootballFields(areaHa)}`;
+}
+
+/** Vulnerable-forest popup: the patch label, its threatened area, and its zoning. */
+export function describeThreatenedPopup(
+  p: Pick<ThreatenedProperties, "label" | "area_ha" | "dominant_lu_desc" | "gpr">,
+): PopupView {
+  return {
+    title: p.label,
+    meta: `${formatHa(p.area_ha)} vulnerable · ${formatFootballFields(p.area_ha)}`,
+    zoning: describeZoning(p.dominant_lu_desc, p.gpr),
+  };
+}
+
+/** Base forest-wash popup: the OSM patch name + area, no zoning (raw ground cover). */
+export function describeForestPopup(
+  p: Pick<ForestProperties, "label" | "forest_area_ha">,
+): PopupView {
+  return { title: p.label, meta: areaMeta(p.forest_area_ha), zoning: null };
+}
+
+/** Development-zone popup: a generic header, the parcel area, and its intended zoning. */
+export function describeZonePopup(
+  p: Pick<DevelopmentZoneProperties, "lu_desc" | "gpr" | "area_ha">,
+): PopupView {
+  return {
+    title: "Development zone",
+    meta: areaMeta(p.area_ha),
+    zoning: describeZoning(p.lu_desc, p.gpr),
+  };
+}
+
+/** Already-cleared popup: the site name, a "Deforested" area line, and what replaced it. */
+export function describeDeforestedPopup(
+  p: Pick<DeforestedProperties, "name" | "area_ha" | "dominant_lu_desc" | "gpr">,
+): PopupView {
+  return {
+    title: p.name,
+    meta: `Deforested · ${areaMeta(p.area_ha)}`,
+    zoning: describeZoning(p.dominant_lu_desc, p.gpr),
+  };
+}
+
+/**
+ * Renders a {@link PopupView} to the popup's outer markup: a title, the optional
+ * meta line, and the zoning rows. Title and meta are escaped here (once, at the
+ * boundary); the zoning HTML is already escaped by {@link zoningViewToHtml}.
+ */
+export function popupViewToHtml(v: PopupView): string {
+  const meta = v.meta
+    ? `<div class="deforest-popup__meta">${escapeHtml(v.meta)}</div>`
+    : "";
+  const zoning = v.zoning ? zoningViewToHtml(v.zoning) : "";
+  return `<div class="deforest-popup__body"><div class="deforest-popup__title">${escapeHtml(v.title)}</div>${meta}${zoning}</div>`;
 }
