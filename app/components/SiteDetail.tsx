@@ -11,13 +11,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatFootballFields, formatHa, formatPercent } from "@/lib/format";
-import {
-  describeGprCode,
-  formatGprRange,
-  GPR_EXPLAINER,
-  parseGpr,
-} from "@/lib/gpr";
-import { colorForLandUse, descriptionForLandUse } from "@/lib/landuse";
+import { describeZoning } from "@/lib/feature-view";
+import { GPR_EXPLAINER } from "@/lib/gpr";
 import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
@@ -188,9 +183,11 @@ export function SiteDetailBody({
  * The URA-zoning rows shared by the vulnerable-forest card ({@link SiteDetailBody})
  * and the already-cleared card ({@link LostDetail}): a land-use swatch + label, its
  * plain-language gloss, the plot-ratio range (with a "what is plot ratio?" tooltip),
- * and any planning-code legends. Extracted so the two cards can't drift — the DOM
- * mirror of the map's `zoningRowsHtml` popup helper. `luDesc` may be null (a cleared
- * area can fall outside every MP2025 polygon), in which case the swatch row is omitted.
+ * and any planning-code legends. Derives its content from the shared
+ * `describeZoning` view-model (lib/feature-view) — the same source the map popup
+ * renders from, so the card and the popup can't drift. `luDesc` may be null (a
+ * cleared area can fall outside every MP2025 polygon), in which case the swatch
+ * row is omitted.
  */
 export function ZoningRows({
   luDesc,
@@ -199,31 +196,31 @@ export function ZoningRows({
   luDesc: string | null;
   gpr: string | null;
 }) {
-  const luDescription = luDesc ? descriptionForLandUse(luDesc) : undefined;
-  const parsed = parseGpr(gpr);
-  const gprRange = formatGprRange(parsed.ratios);
-  const hasGpr = parsed.ratios.length > 0 || parsed.codes.length > 0;
+  // Shared derivation with the map popup (see lib/feature-view) so the card and
+  // the popup can't drift on which colour/gloss/range/codes a patch shows.
+  const zoning = describeZoning(luDesc, gpr);
+  const hasGpr = zoning.range !== null || zoning.codes.length > 0;
 
   return (
     <dl className="flex flex-col gap-2 text-xs">
-      {luDesc && (
+      {zoning.landUse && (
         <Row
           icon={<Layers className="size-3.5" />}
           label="URA zoning"
-          value={luDesc}
-          swatch={colorForLandUse(luDesc)}
+          value={zoning.landUse.label}
+          swatch={zoning.landUse.color}
         />
       )}
-      {luDescription && (
+      {zoning.landUse?.gloss && (
         <p className="-mt-0.5 text-xs leading-snug text-muted-foreground">
-          {luDescription}
+          {zoning.landUse.gloss}
         </p>
       )}
       {hasGpr && (
         <Row
           icon={<Building2 className="size-3.5" />}
           label="Plot ratio"
-          value={gprRange ?? "—"}
+          value={zoning.range ?? "—"}
           labelAfter={
             <Tooltip>
               <TooltipTrigger
@@ -244,18 +241,18 @@ export function ZoningRows({
           }
         />
       )}
-      {parsed.codes.map((code) => {
-        const d = describeGprCode(code);
+      {zoning.codes.map((c) => {
+        const hasGloss = c.shortLabel != null && c.description != null;
         return (
           <p
-            key={code}
+            key={c.code}
             className="-mt-0.5 text-xs leading-snug text-muted-foreground"
           >
             <span className="font-medium text-foreground">
-              {code}
-              {d ? ` — ${d.label}` : ""}
+              {c.code}
+              {hasGloss ? ` — ${c.shortLabel}` : ""}
             </span>
-            {d ? <>. {d.description}</> : null}
+            {hasGloss ? <>. {c.description}</> : null}
           </p>
         );
       })}

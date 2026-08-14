@@ -5,18 +5,18 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { BASEMAP_STYLES, MAPBOX_TOKEN, type Basemap } from "@/lib/mapbox";
 import { formatFootballFields, formatHa } from "@/lib/format";
-import { formatGprRange, GPR_CODE_LABEL, parseGpr } from "@/lib/gpr";
+import {
+  describeZoning,
+  escapeHtml,
+  zoningViewToHtml,
+} from "@/lib/feature-view";
 import type { Theme } from "@/components/ThemeToggle";
 import {
   LOST_FILL_COLOR,
   type ColorMode,
   type MapLayerVisibility,
 } from "@/lib/layers";
-import {
-  colorForLandUse,
-  descriptionForLandUse,
-  landUseFillExpression,
-} from "@/lib/landuse";
+import { landUseFillExpression } from "@/lib/landuse";
 import { cn } from "@/lib/utils";
 import type {
   DeforestedFeatureCollection,
@@ -168,50 +168,6 @@ function asFeatureCollection(
     | null,
 ): GeoJSON.FeatureCollection {
   return (fc ?? EMPTY_FC) as unknown as GeoJSON.FeatureCollection;
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
-  );
-}
-
-/**
- * The URA-zoning rows shared by every popup that shows land use: a colour swatch +
- * land-use label, a plain-language gloss, and the plot-ratio range + code legend.
- * Reused by the vulnerable-forest and already-cleared popups so the two can't drift.
- * All interpolated values are escaped.
- */
-function zoningRowsHtml(
-  lu: string | null | undefined,
-  gpr: string | null | undefined,
-): string {
-  const luRow = lu
-    ? `<div class="deforest-popup__lu"><span class="deforest-popup__swatch" style="background:${colorForLandUse(lu)}"></span>${escapeHtml(lu)}</div>`
-    : "";
-  // Plain-language gloss so the URA code is legible to non-planners.
-  const desc = lu ? descriptionForLandUse(lu) : undefined;
-  const descRow = desc
-    ? `<div class="deforest-popup__desc">${escapeHtml(desc)}</div>`
-    : "";
-  // Plot ratio: numeric density as a range + a compact code legend.
-  const parsed = parseGpr(gpr ?? null);
-  const gprRange = formatGprRange(parsed.ratios);
-  const gprCodes = parsed.codes
-    .map((c) => `${c}${GPR_CODE_LABEL[c] ? ` — ${GPR_CODE_LABEL[c]}` : ""}`)
-    .join(" · ");
-  const gprRow =
-    gprRange || gprCodes
-      ? `<div class="deforest-popup__gpr">Plot ratio${
-          gprRange ? ` ${escapeHtml(gprRange)}` : ""
-        }${
-          gprCodes
-            ? `<span class="deforest-popup__gprCodes">${escapeHtml(gprCodes)}</span>`
-            : ""
-        }</div>`
-      : "";
-  return luRow + descRow + gprRow;
 }
 
 /**
@@ -624,7 +580,9 @@ export function MapView(props: MapViewProps) {
           typeof pr?.area_ha === "number"
             ? formatFootballFields(pr.area_ha)
             : "";
-        const zoning = zoningRowsHtml(pr?.dominant_lu_desc, pr?.gpr);
+        const zoning = zoningViewToHtml(
+          describeZoning(pr?.dominant_lu_desc, pr?.gpr),
+        );
         popup
           .setLngLat(e.lngLat)
           .setHTML(
@@ -671,7 +629,9 @@ export function MapView(props: MapViewProps) {
         const meta = [area && `${area}`, fields && escapeHtml(fields)]
           .filter(Boolean)
           .join(" · ");
-        const zoning = zoningRowsHtml(pr?.dominant_lu_desc, pr?.gpr);
+        const zoning = zoningViewToHtml(
+          describeZoning(pr?.dominant_lu_desc, pr?.gpr),
+        );
         popup
           .setLngLat(e.lngLat)
           .setHTML(
@@ -711,7 +671,7 @@ export function MapView(props: MapViewProps) {
         const fields =
           typeof pr?.area_ha === "number" ? formatFootballFields(pr.area_ha) : "";
         const meta = [area, fields && escapeHtml(fields)].filter(Boolean).join(" · ");
-        const zoning = zoningRowsHtml(pr?.lu_desc, pr?.gpr);
+        const zoning = zoningViewToHtml(describeZoning(pr?.lu_desc, pr?.gpr));
         popup
           .setLngLat(e.lngLat)
           .setHTML(
