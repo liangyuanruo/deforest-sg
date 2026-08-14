@@ -5,11 +5,14 @@ Read this before working in the repo so you don't re-derive what's already settl
 ## What this project is
 Determine **what forest/greenery the URA Master Plan 2025 (MP2025) plans to develop**
 in Singapore, name the affected areas, and **sanity-check** the method against the one
-publicly-announced site it can honestly test: **Maju Forest** (a *named* secondary
-forest recovered by OSM name). The other announced site, **Gillman Barracks**, is
-deliberately out of scope — its redevelopment is mostly the historic barracks buildings,
-not forest clearance, so a forest overlay can't claim to recover it (see the validation
-note below). Outputs feed a separate Next.js app for visual storytelling.
+publicly-announced site it can honestly test by name: **Maju Forest** (a *named*
+secondary forest recovered by OSM name; see the validation note below — this gate is
+Maju alone). The other announced site, **Gillman Barracks**, is mostly historic
+barracks buildings, not forest — but its forested portion (absent from OSM) is now
+ingested as a **contributed (non-OSM) forest polygon**
+(`data/gillman_forest.geojson`) and runs through the identical MP2025 overlay as every
+other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
+(RESIDENTIAL, GPR `SDP`). Outputs feed a separate Next.js app for visual storytelling.
 
 ## Hard boundaries
 - **`app/` is the built dashboard, now folded into this repo** (Aug 2026). The earlier
@@ -24,10 +27,16 @@ note below). Outputs feed a separate Next.js app for visual storytelling.
   `analysis/.cache/` (gitignored), never into `data/` or `results/`.
 
 ## Locked methodology decisions (and why)
-- **Forest source = OSM `natural='forest'`.** Verified: `landuse='forest'` is **empty**
-  in this extract, and official datasets omit secondary forest. Code keeps a defensive
-  union with `landuse='forest'` but `natural` is the real source. (~1,142 raw polygons;
-  831 after clipping to Singapore.) **Why OSM, not official data:** no authoritative
+- **Forest source = OSM `natural='forest'` ∪ contributed (non-OSM) forest polygons**,
+  starting with `data/gillman_forest.geojson` — both normalized into the same forest
+  frame (synthetic stable numeric `osm_id`, `desc`→`name`) and run through the identical
+  MP2025 overlay, no special-casing. Verified: `landuse='forest'` is **empty** in this
+  extract, and official datasets omit secondary forest. Code keeps a defensive union
+  with `landuse='forest'` but `natural` is the real OSM source. (~1,142 raw OSM
+  polygons; 831 after clipping to Singapore, plus the contributed Gillman polygon.) A
+  spike confirmed Gillman's forest is **0.00 ha** overlap with OSM `natural=forest` —
+  genuinely absent from OSM, not a tagging bug, which is why it needed a contributed
+  source rather than a fix to the OSM query. **Why OSM, not official data:** no authoritative
   *vector* dataset of Singapore's secondary forests exists — NParks/data.gov.sg vectors
   map only gazetted spaces; the URA plan encodes zoning *intent*, not ground cover; OSM
   contributors trace satellite imagery into `natural=forest` polygons (physical reality,
@@ -76,9 +85,12 @@ note below). Outputs feed a separate Next.js app for visual storytelling.
 Maju Forest recovers by OSM name (~21.7 ha on dev-zoned land). If it goes false, the
 tagging assumption is wrong — fix before trusting discovery output. **No AOI / bounding-box
 site matching** — an earlier "Gillman Barracks by bbox" check was removed as unprincipled
-(a lon/lat box aligns to nothing on the ground, mislabels neighbouring slivers of the same
-forest, and let the method claim a "recovery" the forest data doesn't support; Gillman is
-mostly building redevelopment, not forest).
+(a lon/lat box aligns to nothing on the ground and mislabels neighbouring slivers of the
+same forest) and stays removed. That's a different question from the Aug 2026 change
+that ingests Gillman's actual forest polygon (`data/gillman_forest.geojson`) as a
+**contributed data source**: the overlay measures it like any other patch (~12.65 ha
+vulnerable, RESIDENTIAL) with no special assertion and **no change to this gate** —
+Gillman is input data, not a validation site.
 
 ## Run
 ```bash

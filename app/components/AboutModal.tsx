@@ -147,13 +147,14 @@ export function AboutModal({
             <h3 className="font-semibold text-foreground">What this shows</h3>
             <p>
               The map overlays crowd-sourced forest cover (OpenStreetMap{" "}
-              <code>natural=forest</code>) on the URA Master Plan 2025 land-use
-              layer, and surfaces every patch of secondary forest that sits on
+              <code>natural=forest</code>, plus a small number of contributed
+              forest polygons where OSM has none) on the URA Master Plan 2025
+              land-use layer, and surfaces every patch of secondary forest that sits on
               development-zoned land — each with its name, size, intended land
               use, and context. Of roughly{" "}
               <span className="text-foreground">5,000 ha</span> of mapped
               forest, about{" "}
-              <span className="text-foreground">2,940 ha (59%)</span> falls on
+              <span className="text-foreground">2,950 ha (59%)</span> falls on
               land the plan zones for development. The largest shares are
               RESERVE SITE, RESIDENTIAL and SPECIAL USE.
             </p>
@@ -243,12 +244,16 @@ export function AboutModal({
               forest, nothing more.
             </p>
             <p>
-              The other announced site, Gillman Barracks, is deliberately left
-              out. Its redevelopment is mostly about the historic barracks
-              buildings, not forest clearance, so a forest-versus-zoning overlay
-              can&rsquo;t claim to &ldquo;recover&rdquo; it without blurring the
-              two. Treat every unannounced patch here as a lead to verify, not a
-              confirmed plan.
+              The other announced site, Gillman Barracks, has no{" "}
+              <code>natural=forest</code> tag in OpenStreetMap at all — its
+              forest is genuinely absent from OSM, not a labeling gap. That
+              forest is now mapped as a contributed polygon and run through the
+              same overlay as everything else, with no special treatment: on
+              the Master Plan&rsquo;s zoning it reports as a ~12.65 ha
+              vulnerable patch (RESIDENTIAL). That&rsquo;s data the overlay
+              measures, not a validation claim — the sanity check above still
+              rests on Maju Forest alone. Treat every unannounced patch here,
+              Gillman included, as a lead to verify, not a confirmed plan.
             </p>
           </section>
 
