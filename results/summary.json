@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-13T12:23:53.976078+00:00",
+  "generated_at": "2026-08-14T02:08:03.953875+00:00",
   "provenance": {
     "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) \u2014 G_MP25_LANDUSE_PL",
     "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
-    "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape)",
+    "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons (data/gillman_forest.geojson) processed by the same overlay",
     "forest_source_url": "https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip",
     "area_crs": "EPSG:3414 (SVY21)",
     "export_crs": "EPSG:4326 (WGS84)"
   },
   "totals": {
-    "total_forest_ha_sg": 5003.4,
-    "total_threatened_ha": 2937.8,
-    "threatened_fraction_of_mapped_forest": 0.587,
-    "n_forest_polygons_sg": 831,
-    "n_threatened_patches": 624
+    "total_forest_ha_sg": 5016.3,
+    "total_threatened_ha": 2950.4,
+    "threatened_fraction_of_mapped_forest": 0.588,
+    "n_forest_polygons_sg": 832,
+    "n_threatened_patches": 625
   },
   "by_lu_desc": [
     {
@@ -23,8 +23,8 @@
     },
     {
       "lu_desc": "RESIDENTIAL",
-      "area_ha": 513.33,
-      "n_fragments": 548
+      "area_ha": 525.98,
+      "n_fragments": 551
     },
     {
       "lu_desc": "SPECIAL USE",
@@ -39,7 +39,7 @@
     {
       "lu_desc": "ROAD",
       "area_ha": 150.58,
-      "n_fragments": 595
+      "n_fragments": 596
     },
     {
       "lu_desc": "UTILITY",
@@ -166,6 +166,10 @@
     {
       "name": "Dover Forest West",
       "threatened_ha": 16.2
+    },
+    {
+      "name": "Gillman Forest",
+      "threatened_ha": 12.65
     },
     {
       "name": "Bukit Brown Forest",
@@ -1007,21 +1011,21 @@
       "source": "OSM_forest \u2229 URA_MP2025",
       "geometry": "Polygon",
       "role": "intersection result \u2014 planned deforestation footprint",
-      "features": 624
+      "features": 625
     },
     {
       "file": "forest_all.geojson",
       "source": "OSM",
       "geometry": "Polygon",
       "role": "all mapped OSM natural=forest inside Singapore (context base layer)",
-      "features": 831
+      "features": 832
     },
     {
       "file": "development_zones.geojson",
       "source": "URA_MP2025",
       "geometry": "Polygon",
       "role": "URA development polygons overlapping forest (context)",
-      "features": 1230
+      "features": 1234
     },
     {
       "file": "deforested.geojson",

@@ -28,6 +28,7 @@ import json
 import math
 import shutil
 import time
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -192,6 +193,46 @@ def despike_geometry(geom, min_spur_m: float = SPIKE_MIN_SPUR_M,
     return parts[0] if len(parts) == 1 else MultiPolygon(parts)
 
 
+# --------------------------------------------------------------------------- #
+# Contributed forest (non-OSM sources, processed by the SAME overlay)
+# --------------------------------------------------------------------------- #
+CONTRIBUTED_ID_BASE = 9_000_000_000_000  # high band, above OSM ids, JS-safe (< 2**53)
+
+
+def contributed_osm_id(name: str) -> int:
+    """Deterministic, stable, positive synthetic osm_id for a contributed forest
+    patch, in a high band clearly above real OSM ids so it never collides and so
+    /forest/<id> share links survive pipeline re-runs. Same name -> same id, so
+    same-named parts dissolve into one patch."""
+    return CONTRIBUTED_ID_BASE + zlib.crc32((name or "").encode("utf-8"))
+
+
+def load_contributed_forest(path, source_layer) -> gpd.GeoDataFrame:
+    """Normalize a contributed forest geojson to the forest frame shape the OSM
+    path produces: columns [osm_id, name, source_layer, geometry] in EPSG:3414.
+    Provenance is uncertain and fields vary, so depend ONLY on geometry (+ optional
+    `desc` -> name); synthesize everything else. GPR/LU_DESC are intentionally NOT
+    read from the file — the pipeline derives them from the MP2025 overlay like
+    every patch.
+
+    ponytail: contributed sources are assumed spatially disjoint from OSM forest
+    (verified 0.00 ha overlap for Gillman), so we whole-add with no de-duplication.
+    If a future source overlaps OSM forest, difference it against the OSM forest
+    union before adding — that is the upgrade path.
+    """
+    gdf = gpd.read_file(path, engine="pyogrio").to_crs(AREA_CRS)
+    gdf["geometry"] = gdf.geometry.make_valid()
+    gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty].copy()
+
+    raw = gdf["desc"] if "desc" in gdf.columns else pd.Series([None] * len(gdf), index=gdf.index)
+    gdf["name"] = [n if isinstance(n, str) and n.strip() else None for n in raw]
+    gdf["osm_id"] = gdf["name"].apply(
+        lambda n: contributed_osm_id(n) if n else contributed_osm_id(source_layer)
+    )
+    gdf["source_layer"] = source_layer
+    return gdf[["osm_id", "name", "source_layer", "geometry"]].copy()
+
+
 def load_forest(mask) -> gpd.GeoDataFrame:
     """OSM natural='forest' (+ landuse='forest' if any), clipped to Singapore, EPSG:3414."""
     frames = []
@@ -203,6 +244,12 @@ def load_forest(mask) -> gpd.GeoDataFrame:
         frames.append(lu_forest.assign(source_layer="landuse"))
     forest = pd.concat(frames, ignore_index=True)
     forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=nat.crs).to_crs(AREA_CRS)
+    # Contributed (non-OSM) forest sources join here, already in EPSG:3414, so they
+    # reuse the SAME make_valid/despike/clip/dissolve cleaning below — no special path.
+    # OSM-only columns become NaN for contributed rows; they're dropped before overlay.
+    contributed = load_contributed_forest(DATA / "gillman_forest.geojson", "gillman")
+    forest = pd.concat([forest, contributed], ignore_index=True)
+    forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=AREA_CRS)
     forest["geometry"] = forest.geometry.make_valid()
     # Strip OSM digitizing spikes (needle vertices placed far from the polygon body)
     # before they inflate areas and render as long spurs. Runs in metric EPSG:3414.
@@ -465,7 +512,7 @@ def build_summary(patches: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
         "provenance": {
             "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) — G_MP25_LANDUSE_PL",
             "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
-            "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape)",
+            "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons (data/gillman_forest.geojson) processed by the same overlay",
             "forest_source_url": "https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip",
             "area_crs": f"EPSG:{AREA_CRS} (SVY21)",
             "export_crs": f"EPSG:{WEB_CRS} (WGS84)",
@@ -574,7 +621,10 @@ def main() -> None:
         "geometry",
     ]].copy()
     threat_out["lu_desc_breakdown"] = threat_out["lu_desc_breakdown"].apply(json.dumps)
-    threat_out["source"] = "OSM_forest ∩ URA_MP2025"
+    threat_out["source"] = threat_out["source_layer"].apply(
+        lambda sl: "OSM_forest ∩ URA_MP2025" if sl in ("natural", "landuse")
+        else "contributed_forest ∩ URA_MP2025"
+    )
     threat_out = threat_out.rename(columns={"osm_id": "id"})
     write_geojson(threat_out, RESULTS / "threatened_forests.geojson")
 
@@ -589,7 +639,9 @@ def main() -> None:
     forest_out = forest_labeled[
         ["osm_id", "name", "label", "forest_area_ha", "source_layer", "geometry"]
     ].copy()
-    forest_out["source"] = "OSM"
+    forest_out["source"] = forest_out["source_layer"].apply(
+        lambda sl: "OSM" if sl in ("natural", "landuse") else "contributed"
+    )
     forest_out = forest_out.rename(columns={"osm_id": "id"})
     write_geojson(forest_out, RESULTS / "forest_all.geojson")
 
