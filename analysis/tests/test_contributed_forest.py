@@ -12,6 +12,7 @@ import json
 import numbers
 
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import Point, box
 
 from run_analysis import (
@@ -147,3 +148,28 @@ def test_multi_zone_forest_splits_into_one_tract_per_zone():
     assert by_zone["RESIDENTIAL"]["id"] == 42
     assert by_zone["RESERVE SITE"]["id"] == tract_osm_id(42, "RESERVE SITE")
     assert patches["id"].is_unique
+
+
+def test_subfloor_sliver_folds_into_largest_tract_preserving_area():
+    forest, localities = _forest_and_localities()
+    frag = _frag_two_zones()
+    # A hairline ROAD sliver (0.001 ha, below FOLD_FLOOR_HA) grazing the same forest.
+    sliver = gpd.GeoDataFrame(
+        [{"osm_id": 42, "name": "Testville Forest", "source_layer": "natural",
+          "forest_area_ha": 5.0, "LU_DESC": "ROAD", "GPR": None,
+          "area_ha": 0.001, "geometry": box(30300, 30000, 30303, 30003)}],
+        geometry="geometry", crs=AREA_CRS,
+    )
+    frag = gpd.GeoDataFrame(pd.concat([frag, sliver], ignore_index=True),
+                            geometry="geometry", crs=AREA_CRS)
+
+    patches = aggregate_patches(frag, forest, localities)
+
+    # The ROAD sliver is folded away — no standalone ROAD tract remains.
+    zones = set(patches["dominant_lu_desc"])
+    assert zones == {"RESIDENTIAL", "RESERVE SITE"}
+    # Its area is absorbed into the forest's largest tract (RESIDENTIAL 4.0 + 0.001),
+    # so nothing is lost.
+    by_zone = {r["dominant_lu_desc"]: r for _, r in patches.iterrows()}
+    assert by_zone["RESIDENTIAL"]["area_ha"] == 4.001
+    assert round(patches["area_ha"].sum(), 4) == 5.001

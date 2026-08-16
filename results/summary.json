@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T05:49:18.650351+00:00",
+  "generated_at": "2026-08-16T05:58:14.239895+00:00",
   "provenance": {
     "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) \u2014 G_MP25_LANDUSE_PL",
     "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
@@ -13,7 +13,7 @@
     "total_threatened_ha": 2992.8,
     "threatened_fraction_of_mapped_forest": 0.592,
     "n_forest_polygons_sg": 833,
-    "n_threatened_patches": 1033
+    "n_threatened_patches": 845
   },
   "by_lu_desc": [
     {
@@ -269,12 +269,12 @@
       "rank": 3,
       "label": "Tagore Forest",
       "name": "Tagore Forest",
-      "locality": "Lentor",
-      "area_ha": 98.38,
+      "locality": "Tagore",
+      "area_ha": 98.4,
       "forest_area_ha": 100.43,
       "threatened_fraction": 0.98,
       "dominant_lu_desc": "RESIDENTIAL",
-      "gpr": "SDP",
+      "gpr": "EVA, SDP",
       "centroid": [
         103.823015,
         1.389149
@@ -432,9 +432,9 @@
       "label": "Toh Tuck Forest",
       "name": "Toh Tuck Forest",
       "locality": "Highgate Park",
-      "area_ha": 54.61,
+      "area_ha": 54.65,
       "forest_area_ha": 56.42,
-      "threatened_fraction": 0.968,
+      "threatened_fraction": 0.969,
       "dominant_lu_desc": "RESERVE SITE",
       "gpr": "EVA",
       "centroid": [
@@ -558,11 +558,11 @@
       "label": "Lorong Halus",
       "name": "Lorong Halus",
       "locality": "Pasir Ris Wafer Fab Park",
-      "area_ha": 30.72,
+      "area_ha": 30.77,
       "forest_area_ha": 35.68,
-      "threatened_fraction": 0.861,
+      "threatened_fraction": 0.862,
       "dominant_lu_desc": "BUSINESS 2",
-      "gpr": "SDP",
+      "gpr": "EVA, SDP",
       "centroid": [
         103.92833,
         1.397058
@@ -627,6 +627,24 @@
     },
     {
       "rank": 23,
+      "label": "Forest near Pulau Punggol Barat",
+      "name": null,
+      "locality": "Pulau Punggol Barat",
+      "area_ha": 25.75,
+      "forest_area_ha": 25.77,
+      "threatened_fraction": 0.999,
+      "dominant_lu_desc": "UTILITY",
+      "gpr": "1.7, EVA",
+      "centroid": [
+        103.882851,
+        1.421898
+      ],
+      "context": null,
+      "wildlife": null,
+      "status": null
+    },
+    {
+      "rank": 24,
       "label": "Forest near Mandai",
       "name": null,
       "locality": "Mandai",
@@ -638,24 +656,6 @@
       "centroid": [
         103.808093,
         1.418677
-      ],
-      "context": null,
-      "wildlife": null,
-      "status": null
-    },
-    {
-      "rank": 24,
-      "label": "Forest near Pulau Punggol Barat",
-      "name": null,
-      "locality": "Pulau Punggol Barat",
-      "area_ha": 25.72,
-      "forest_area_ha": 25.77,
-      "threatened_fraction": 0.998,
-      "dominant_lu_desc": "UTILITY",
-      "gpr": "EVA",
-      "centroid": [
-        103.882851,
-        1.421898
       ],
       "context": null,
       "wildlife": null,
@@ -1015,7 +1015,7 @@
       "source": "OSM_forest \u2229 URA_MP2025",
       "geometry": "Polygon",
       "role": "intersection result \u2014 planned deforestation footprint",
-      "features": 1033
+      "features": 845
     },
     {
       "file": "forest_all.geojson",

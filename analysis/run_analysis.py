@@ -345,6 +345,7 @@ def attach_nearest_locality(gdf: gpd.GeoDataFrame,
 
 
 TRACT_ID_BASE = 9_100_000_000_000  # sibling-tract ids: above the contributed band, < 2**53
+FOLD_FLOOR_HA = 0.05  # zone tracts smaller than this fold into their forest's largest tract
 
 
 def tract_osm_id(osm_id: int, lu_desc: str) -> int:
@@ -354,6 +355,27 @@ def tract_osm_id(osm_id: int, lu_desc: str) -> int:
     return TRACT_ID_BASE + zlib.crc32(f"{int(osm_id)}:{lu_desc}".encode("utf-8"))
 
 
+def fold_slivers(frag: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Relabel sub-FOLD_FLOOR_HA zone fragments to their forest's largest zone, so thin
+    ROAD/UTILITY strips and overlay artifacts don't become their own tracts.
+
+    No geometry work: this only rewrites LU_DESC on the fragments below the floor, and
+    the caller's existing dissolve then unions the folded geometry into the keeper for
+    free. Totals are conserved (area moves into the keeper, never dropped); the keeper is
+    the largest tract and is never folded, so a forest whose only threatened area is a
+    sliver keeps that lone tract. Runs on a copy so the caller's frag (true by-LU_DESC
+    summary + validation) keeps real zoning. Vectorized over fragments — bounded by the
+    tiny forest set, no per-forest loop."""
+    frag = frag.copy()
+    tract_area = frag.groupby(["osm_id", "LU_DESC"])["area_ha"].transform("sum")
+    keeper_lu = (frag.groupby(["osm_id", "LU_DESC"])["area_ha"].sum()
+                 .groupby(level="osm_id").idxmax().map(lambda k: k[1]))
+    keeper = frag["osm_id"].map(keeper_lu)
+    fold = (tract_area < FOLD_FLOOR_HA) & (frag["LU_DESC"] != keeper)
+    frag.loc[fold, "LU_DESC"] = keeper[fold]
+    return frag
+
+
 def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
                       localities: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Split threatened fragments into one tract per (forest polygon x zone type).
@@ -361,7 +383,9 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
     A forest crossed by more than one MP2025 zone yields one tract per LU_DESC, each a
     distinct vulnerable area with its own zoning, geometry, and stable id — not a single
     patch labelled by its dominant zone. Same-forest tracts share the forest name/area.
+    Sub-floor zone slivers are folded into the forest's largest tract first.
     """
+    frag = fold_slivers(frag)
     key = ["osm_id", "LU_DESC"]
     # Geometry: union of threatened fragments per (forest polygon, zone type).
     geom = frag.dissolve(by=key)[["geometry"]]

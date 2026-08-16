@@ -57,10 +57,14 @@ other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
   grouped by `(forest polygon × LU_DESC)`, not dissolved to one patch per forest. A
   forest crossed by more than one MP2025 zone yields several tracts, each a distinct
   vulnerable area with its own `LU_DESC`, `GPR`, geometry, and id (e.g. Bukit Brown →
-  RESIDENTIAL + RESERVE SITE + ROAD). Pure split, no minimum-area floor, so thin
-  ROAD/UTILITY slivers appear as their own (sometimes sub-0.01 ha) tracts. Ids: the
-  largest tract per forest keeps the bare `osm_id` (share links stay stable); sibling
-  tracts get a synthetic id in a band above the contributed range (`tract_osm_id`).
+  RESIDENTIAL + RESERVE SITE + ROAD). Zone tracts below `FOLD_FLOOR_HA` (0.05 ha) fold
+  into their forest's largest tract (`fold_slivers`) so hairline ROAD/UTILITY strips and
+  overlay artifacts don't become their own features — area moves into the keeper, totals
+  conserved, no geometry work (it just relabels sub-floor fragments before the existing
+  dissolve). A forest whose *only* threatened area is a sliver keeps that lone tract
+  (nothing larger to fold into). Ids: the largest tract per forest keeps the bare
+  `osm_id` (share links stay stable); sibling tracts get a synthetic id in a band above
+  the contributed range (`tract_osm_id`).
 - **Every affected area carries a name** (OSM `name`, else nearest OSM locality) and,
   where known, curated context from `analysis/site_context.py`.
 - **Output all three geometry layers** (OSM forest, URA dev zones, intersection), each

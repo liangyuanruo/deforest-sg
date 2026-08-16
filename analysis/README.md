@@ -93,8 +93,10 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
    `run_analysis.py`), keeping each fragment's `LU_DESC` and `GPR`.
 5. **Split** fragments into one tract per `(forest polygon × LU_DESC)` — a forest
    crossed by several zones becomes several tracts, each with its own zoning and a
-   stable id (the largest keeps the forest's `osm_id`, siblings get a banded id). Label
-   by OSM `name`, else nearest OSM locality; attach curated context from
+   stable id (the largest keeps the forest's `osm_id`, siblings get a banded id). Zone
+   tracts below `FOLD_FLOOR_HA` (0.05 ha) fold into the forest's largest tract
+   (`fold_slivers`, totals conserved) so hairline strips/artifacts aren't their own
+   features. Label by OSM `name`, else nearest OSM locality; attach curated context from
    `site_context.py`, keyed on the forest name (contributed polygons carry their own
    name, e.g. `Gillman Forest`).
 6. **Validate** against Maju Forest (by name) — the one site the method can honestly
