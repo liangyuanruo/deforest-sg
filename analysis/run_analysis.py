@@ -198,6 +198,16 @@ def despike_geometry(geom, min_spur_m: float = SPIKE_MIN_SPUR_M,
 # --------------------------------------------------------------------------- #
 CONTRIBUTED_ID_BASE = 9_000_000_000_000  # high band, above OSM ids, JS-safe (< 2**53)
 
+# Contributed forest files (filename, source_layer). Each is normalized into the
+# forest frame and run through the identical MP2025 overlay — no special-casing.
+# Same-named parts across files collapse via the dissolve-by-osm_id below, so a file
+# may safely repeat a patch another file already carries (bukit_brown re-includes the
+# Gillman polygons; verified byte-identical, so they union to the same footprint).
+CONTRIBUTED_FOREST_SOURCES = [
+    ("gillman_forest.geojson", "gillman"),
+    ("bukit_brown.geojson", "bukit_brown"),
+]
+
 
 def contributed_osm_id(name: str) -> int:
     """Deterministic, stable, positive synthetic osm_id for a contributed forest
@@ -247,8 +257,8 @@ def load_forest(mask) -> gpd.GeoDataFrame:
     # Contributed (non-OSM) forest sources join here, already in EPSG:3414, so they
     # reuse the SAME make_valid/despike/clip/dissolve cleaning below — no special path.
     # OSM-only columns become NaN for contributed rows; they're dropped before overlay.
-    contributed = load_contributed_forest(DATA / "gillman_forest.geojson", "gillman")
-    forest = pd.concat([forest, contributed], ignore_index=True)
+    contributed = [load_contributed_forest(DATA / f, layer) for f, layer in CONTRIBUTED_FOREST_SOURCES]
+    forest = pd.concat([forest, *contributed], ignore_index=True)
     forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=AREA_CRS)
     forest["geometry"] = forest.geometry.make_valid()
     # Strip OSM digitizing spikes (needle vertices placed far from the polygon body)
@@ -512,7 +522,9 @@ def build_summary(patches: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
         "provenance": {
             "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) — G_MP25_LANDUSE_PL",
             "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
-            "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons (data/gillman_forest.geojson) processed by the same overlay",
+            "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons ("
+            + ", ".join(f"data/{f}" for f, _ in CONTRIBUTED_FOREST_SOURCES)
+            + ") processed by the same overlay",
             "forest_source_url": "https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip",
             "area_crs": f"EPSG:{AREA_CRS} (SVY21)",
             "export_crs": f"EPSG:{WEB_CRS} (WGS84)",

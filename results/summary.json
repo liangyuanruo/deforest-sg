@@ -1,30 +1,30 @@
 {
-  "generated_at": "2026-08-14T02:08:03.953875+00:00",
+  "generated_at": "2026-08-16T05:26:43.626582+00:00",
   "provenance": {
     "masterplan": "URA Master Plan 2025 Land Use Layer (data.gov.sg, dataset d_a8c3546b26712e35021f3a681d0353ae) \u2014 G_MP25_LANDUSE_PL",
     "masterplan_url": "https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view",
-    "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons (data/gillman_forest.geojson) processed by the same overlay",
+    "forest_source": "OpenStreetMap natural=forest (BBBike Singapore extract, osmium2shape), plus contributed forest polygons (data/gillman_forest.geojson, data/bukit_brown.geojson) processed by the same overlay",
     "forest_source_url": "https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip",
     "area_crs": "EPSG:3414 (SVY21)",
     "export_crs": "EPSG:4326 (WGS84)"
   },
   "totals": {
-    "total_forest_ha_sg": 5016.3,
-    "total_threatened_ha": 2950.4,
-    "threatened_fraction_of_mapped_forest": 0.588,
-    "n_forest_polygons_sg": 832,
-    "n_threatened_patches": 625
+    "total_forest_ha_sg": 5058.9,
+    "total_threatened_ha": 2992.8,
+    "threatened_fraction_of_mapped_forest": 0.592,
+    "n_forest_polygons_sg": 833,
+    "n_threatened_patches": 626
   },
   "by_lu_desc": [
     {
       "lu_desc": "RESERVE SITE",
-      "area_ha": 1513.95,
-      "n_fragments": 172
+      "area_ha": 1521.88,
+      "n_fragments": 173
     },
     {
       "lu_desc": "RESIDENTIAL",
-      "area_ha": 525.98,
-      "n_fragments": 551
+      "area_ha": 560.28,
+      "n_fragments": 552
     },
     {
       "lu_desc": "SPECIAL USE",
@@ -38,8 +38,8 @@
     },
     {
       "lu_desc": "ROAD",
-      "area_ha": 150.58,
-      "n_fragments": 596
+      "area_ha": 150.7,
+      "n_fragments": 599
     },
     {
       "lu_desc": "UTILITY",
@@ -138,6 +138,10 @@
     {
       "name": "Toh Tuck Forest",
       "threatened_ha": 56.26
+    },
+    {
+      "name": "Bukit Brown",
+      "threatened_ha": 42.36
     },
     {
       "name": "Pulau Seletar",
@@ -461,6 +465,24 @@
     },
     {
       "rank": 14,
+      "label": "Bukit Brown",
+      "name": "Bukit Brown",
+      "locality": "Sanny Park",
+      "area_ha": 42.36,
+      "forest_area_ha": 42.54,
+      "threatened_fraction": 0.996,
+      "dominant_lu_desc": "RESIDENTIAL",
+      "gpr": "EVA, SDP",
+      "centroid": [
+        103.828858,
+        1.328824
+      ],
+      "context": null,
+      "wildlife": null,
+      "status": null
+    },
+    {
+      "rank": 15,
       "label": "Forest near Changi Bay",
       "name": null,
       "locality": "Changi Bay",
@@ -478,7 +500,7 @@
       "status": null
     },
     {
-      "rank": 15,
+      "rank": 16,
       "label": "Forest near Kg. Sanyongkong Parit",
       "name": null,
       "locality": "Kg. Sanyongkong Parit",
@@ -496,7 +518,7 @@
       "status": null
     },
     {
-      "rank": 16,
+      "rank": 17,
       "label": "Forest near Kg. Batu Koyok",
       "name": null,
       "locality": "Kg. Batu Koyok",
@@ -514,7 +536,7 @@
       "status": null
     },
     {
-      "rank": 17,
+      "rank": 18,
       "label": "Pulau Seletar",
       "name": "Pulau Seletar",
       "locality": "Pulau Seletar",
@@ -532,7 +554,7 @@
       "status": null
     },
     {
-      "rank": 18,
+      "rank": 19,
       "label": "Lorong Halus",
       "name": "Lorong Halus",
       "locality": "Pasir Ris Wafer Fab Park",
@@ -550,7 +572,7 @@
       "status": "Mixed reserve/development-zoned."
     },
     {
-      "rank": 19,
+      "rank": 20,
       "label": "Forest near Kg. Batu Koyok",
       "name": null,
       "locality": "Kg. Batu Koyok",
@@ -568,7 +590,7 @@
       "status": null
     },
     {
-      "rank": 20,
+      "rank": 21,
       "label": "Forest near Marina East (mp)",
       "name": null,
       "locality": "Marina East (mp)",
@@ -586,7 +608,7 @@
       "status": null
     },
     {
-      "rank": 21,
+      "rank": 22,
       "label": "Forest near Admiralty",
       "name": null,
       "locality": "Admiralty",
@@ -604,7 +626,7 @@
       "status": null
     },
     {
-      "rank": 22,
+      "rank": 23,
       "label": "Forest near Pasir Ris West",
       "name": null,
       "locality": "Pasir Ris West",
@@ -622,7 +644,7 @@
       "status": null
     },
     {
-      "rank": 23,
+      "rank": 24,
       "label": "Forest near Tanah Merah",
       "name": null,
       "locality": "Tanah Merah",
@@ -640,7 +662,7 @@
       "status": null
     },
     {
-      "rank": 24,
+      "rank": 25,
       "label": "Forest near Pulau Punggol Barat",
       "name": null,
       "locality": "Pulau Punggol Barat",
@@ -658,7 +680,7 @@
       "status": null
     },
     {
-      "rank": 25,
+      "rank": 26,
       "label": "Forest near Mandai",
       "name": null,
       "locality": "Mandai",
@@ -676,7 +698,7 @@
       "status": null
     },
     {
-      "rank": 26,
+      "rank": 27,
       "label": "Forest near Kg. Sanyongkong Parit",
       "name": null,
       "locality": "Kg. Sanyongkong Parit",
@@ -694,7 +716,7 @@
       "status": null
     },
     {
-      "rank": 27,
+      "rank": 28,
       "label": "Springleaf Forest",
       "name": "Springleaf Forest",
       "locality": "Springleaf",
@@ -712,7 +734,7 @@
       "status": null
     },
     {
-      "rank": 28,
+      "rank": 29,
       "label": "Forest near Safti",
       "name": null,
       "locality": "Safti",
@@ -730,7 +752,7 @@
       "status": null
     },
     {
-      "rank": 29,
+      "rank": 30,
       "label": "Forest near Kg. Sanyongkong",
       "name": null,
       "locality": "Kg. Sanyongkong",
@@ -748,7 +770,7 @@
       "status": null
     },
     {
-      "rank": 30,
+      "rank": 31,
       "label": "Adam Drive Forest",
       "name": "Adam Drive Forest",
       "locality": "The Greenwood",
@@ -766,7 +788,7 @@
       "status": null
     },
     {
-      "rank": 31,
+      "rank": 32,
       "label": "Forest near Seletar",
       "name": null,
       "locality": "Seletar",
@@ -784,7 +806,7 @@
       "status": null
     },
     {
-      "rank": 32,
+      "rank": 33,
       "label": "Forest near Kg. Batu Koyok",
       "name": null,
       "locality": "Kg. Batu Koyok",
@@ -802,7 +824,7 @@
       "status": null
     },
     {
-      "rank": 33,
+      "rank": 34,
       "label": "Maju Forest",
       "name": "Maju Forest",
       "locality": "Sunset Way",
@@ -820,7 +842,7 @@
       "status": "Flagged for development within the next decade (MND, 2026)."
     },
     {
-      "rank": 34,
+      "rank": 35,
       "label": "Forest near Marina East",
       "name": null,
       "locality": "Marina East",
@@ -838,7 +860,7 @@
       "status": null
     },
     {
-      "rank": 35,
+      "rank": 36,
       "label": "Loyang Mangroves",
       "name": "Loyang Mangroves",
       "locality": "Loyang West",
@@ -856,7 +878,7 @@
       "status": null
     },
     {
-      "rank": 36,
+      "rank": 37,
       "label": "Forest near Changi Village",
       "name": null,
       "locality": "Changi Village",
@@ -874,7 +896,7 @@
       "status": null
     },
     {
-      "rank": 37,
+      "rank": 38,
       "label": "Forest near Gali Batu",
       "name": null,
       "locality": "Gali Batu",
@@ -892,7 +914,7 @@
       "status": null
     },
     {
-      "rank": 38,
+      "rank": 39,
       "label": "Forest near Changi Point",
       "name": null,
       "locality": "Changi Point",
@@ -910,7 +932,7 @@
       "status": null
     },
     {
-      "rank": 39,
+      "rank": 40,
       "label": "Forest near Jalan Kayu",
       "name": null,
       "locality": "Jalan Kayu",
@@ -926,24 +948,6 @@
       "context": null,
       "wildlife": null,
       "status": null
-    },
-    {
-      "rank": 40,
-      "label": "Dover Forest West",
-      "name": "Dover Forest West",
-      "locality": "Singapore Polytechnic",
-      "area_ha": 16.2,
-      "forest_area_ha": 17.65,
-      "threatened_fraction": 0.918,
-      "dominant_lu_desc": "RESIDENTIAL",
-      "gpr": "EVA, SDP",
-      "centroid": [
-        103.774029,
-        1.315039
-      ],
-      "context": "Western half of Dover Forest at Ulu Pandan. After a 2021 review, Dover Forest East was released for HDB flats while the West was deferred for further study and phased development.",
-      "wildlife": "Sunda pangolin, grey-headed fish eagle and straw-headed bulbul have been recorded in the wider Dover/Ulu Pandan area.",
-      "status": "Deferred/phased after 2021 review; remains zoned for eventual development."
     }
   ],
   "methodology": {
@@ -1011,21 +1015,21 @@
       "source": "OSM_forest \u2229 URA_MP2025",
       "geometry": "Polygon",
       "role": "intersection result \u2014 planned deforestation footprint",
-      "features": 625
+      "features": 626
     },
     {
       "file": "forest_all.geojson",
       "source": "OSM",
       "geometry": "Polygon",
       "role": "all mapped OSM natural=forest inside Singapore (context base layer)",
-      "features": 832
+      "features": 833
     },
     {
       "file": "development_zones.geojson",
       "source": "URA_MP2025",
       "geometry": "Polygon",
       "role": "URA development polygons overlapping forest (context)",
-      "features": 1234
+      "features": 1235
     },
     {
       "file": "deforested.geojson",

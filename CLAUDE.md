@@ -27,13 +27,17 @@ other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
   `analysis/.cache/` (gitignored), never into `data/` or `results/`.
 
 ## Locked methodology decisions (and why)
-- **Forest source = OSM `natural='forest'` ∪ contributed (non-OSM) forest polygons**,
-  starting with `data/gillman_forest.geojson` — both normalized into the same forest
+- **Forest source = OSM `natural='forest'` ∪ contributed (non-OSM) forest polygons**
+  (`CONTRIBUTED_FOREST_SOURCES` in `run_analysis.py`: `data/gillman_forest.geojson`,
+  `data/bukit_brown.geojson`) — all normalized into the same forest
   frame (synthetic stable numeric `osm_id`, `desc`→`name`) and run through the identical
-  MP2025 overlay, no special-casing. Verified: `landuse='forest'` is **empty** in this
-  extract, and official datasets omit secondary forest. Code keeps a defensive union
-  with `landuse='forest'` but `natural` is the real OSM source. (~1,142 raw OSM
-  polygons; 831 after clipping to Singapore, plus the contributed Gillman polygon.) A
+  MP2025 overlay, no special-casing. Same-named parts across files dissolve by `osm_id`,
+  so a file may safely repeat a patch another carries (`bukit_brown.geojson` re-includes
+  the Gillman polygons byte-identically → they union, no double count). Verified:
+  `landuse='forest'` is **empty** in this extract, and official datasets omit secondary
+  forest. Code keeps a defensive union with `landuse='forest'` but `natural` is the real
+  OSM source. (~1,142 raw OSM polygons; 831 after clipping to Singapore, plus the
+  contributed Gillman + Bukit Brown polygons → 833 total.) A
   spike confirmed Gillman's forest is **0.00 ha** overlap with OSM `natural=forest` —
   genuinely absent from OSM, not a tagging bug, which is why it needed a contributed
   source rather than a fix to the OSM query. **Why OSM, not official data:** no authoritative

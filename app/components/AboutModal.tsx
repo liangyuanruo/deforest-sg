@@ -154,7 +154,7 @@ export function AboutModal({
               use, and context. Of roughly{" "}
               <span className="text-foreground">5,000 ha</span> of mapped
               forest, about{" "}
-              <span className="text-foreground">2,950 ha (59%)</span> falls on
+              <span className="text-foreground">2,990 ha (59%)</span> falls on
               land the plan zones for development. The largest shares are
               RESERVE SITE, RESIDENTIAL and SPECIAL USE.
             </p>

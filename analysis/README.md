@@ -43,8 +43,8 @@ poetry run python run_analysis.py
 Runtime is ~6–13 s (the Singapore mask is cached after the first run). Expected tail:
 
 ```
-Forest (SG-clipped): 832 polygons, 5,016 ha
-Threatened fragments: 1,689, 2,950.4 ha
+Forest (SG-clipped): 833 polygons, 5,059 ha
+Threatened fragments: 1,694, 2,992.8 ha
 Validation overall_pass=True
   OK Maju Forest: threatened 21.69 ha (forest present 21.69 ha)
 ```
@@ -61,6 +61,7 @@ tagging assumption before trusting the discovery output.
 | `MasterPlan2025LandUseLayer.geojson.gz` | URA MP2025 land-use polygons (`G_MP25_LANDUSE_PL`), WGS84. Key attrs: `LU_DESC`, `GPR`, `OBJECTID`. | [data.gov.sg dataset `d_a8c3546b26712e35021f3a681d0353ae`](https://data.gov.sg/datasets/d_a8c3546b26712e35021f3a681d0353ae/view) |
 | `osm-singapore.zip` | OSM shapefiles — BBBike extract (`osmium2shape`, 8-layer schema; same fixed layer set as Geofabrik-style). We use `natural.shp` (forest polygons) and `places.shp` (locality labels). | [BBBike Singapore extract](https://download2.bbbike.org/osm/extract/planet_103.531,1.213_104.195,1.644.osm.shp.zip) |
 | `gillman_forest.geojson` | Contributed (non-OSM) forest polygons for the Gillman site, whose canopy is absent from OSM. MultiPolygons, WGS84. | Contributed / hand-traced (provenance to confirm) |
+| `bukit_brown.geojson` | Contributed (non-OSM) forest polygons for the Bukit Brown site (~42.5 ha). MultiPolygons, WGS84. Re-includes the Gillman polygons (byte-identical, so they dissolve together — no double count). | Contributed / hand-traced (provenance to confirm) |
 
 ## 5. Outputs (written to `../results/`)
 
@@ -84,7 +85,8 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
 3. **Forest source** = OSM `natural='forest'` (defensively unioned with
    `landuse='forest'`, which is **empty** in this extract — confirming `natural` holds
    all the forest data), clipped to Singapore. 831 polygons, ~5,007 ha — **plus
-   contributed (non-OSM) forest polygons**, starting with `data/gillman_forest.geojson`,
+   contributed (non-OSM) forest polygons** (see `CONTRIBUTED_FOREST_SOURCES` in
+   `run_analysis.py`: `data/gillman_forest.geojson`, `data/bukit_brown.geojson`),
    normalized into the same forest frame (synthetic stable `osm_id`, `desc`→`name`) and
    run through the identical overlay below, no special-casing.
 4. **Overlay** forest × MP2025 **development** zones (see `DEVELOPMENT_ZONES` in
