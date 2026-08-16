@@ -53,8 +53,14 @@ other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
 - **CRS**: compute areas in **EPSG:3414** (SVY21, metres); export geometry in
   **EPSG:4326** (lon/lat) for web maps. (The original briefing's EPSG:3414 export was
   wrong for web rendering — corrected.)
-- **Keep per-fragment `LU_DESC` + `GPR`** through the overlay (no blind dissolve) so
-  each threatened patch knows its intended use and plot ratio.
+- **Split each forest into one tract per zone type.** After the overlay, fragments are
+  grouped by `(forest polygon × LU_DESC)`, not dissolved to one patch per forest. A
+  forest crossed by more than one MP2025 zone yields several tracts, each a distinct
+  vulnerable area with its own `LU_DESC`, `GPR`, geometry, and id (e.g. Bukit Brown →
+  RESIDENTIAL + RESERVE SITE + ROAD). Pure split, no minimum-area floor, so thin
+  ROAD/UTILITY slivers appear as their own (sometimes sub-0.01 ha) tracts. Ids: the
+  largest tract per forest keeps the bare `osm_id` (share links stay stable); sibling
+  tracts get a synthetic id in a band above the contributed range (`tract_osm_id`).
 - **Every affected area carries a name** (OSM `name`, else nearest OSM locality) and,
   where known, curated context from `analysis/site_context.py`.
 - **Output all three geometry layers** (OSM forest, URA dev zones, intersection), each

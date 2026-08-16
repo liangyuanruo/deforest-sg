@@ -69,7 +69,7 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
 
 | File | Source | Role |
 | --- | --- | --- |
-| `threatened_forests.geojson` | `OSM_forest ∩ URA_MP2025` (`contributed_forest ∩ URA_MP2025` for non-OSM patches) | **Headline result** — forest on development-zoned land, one feature per forest polygon, with name/locality, area, dominant land use, plot ratio, and curated context. |
+| `threatened_forests.geojson` | `OSM_forest ∩ URA_MP2025` (`contributed_forest ∩ URA_MP2025` for non-OSM patches) | **Headline result** — forest on development-zoned land, **one feature per (forest polygon × zone type)**: a forest crossed by several MP2025 zones yields one tract per zone, each with name/locality, area, its zone's land use + plot ratio, and curated context. |
 | `forest_all.geojson` | `OSM` (`contributed` for non-OSM patches) | All mapped Singapore forest (threatened or not) — context base layer. |
 | `development_zones.geojson` | `URA_MP2025` | The MP2025 development polygons that overlap forest — the masterplan side, for context. |
 | `deforested.geojson` | `curated ∩ URA_MP2025` | Forest **already cleared** (Tengah Forest, Dover Forest East) — the original hand-traced footprint, annotated with the MP2025 zoning that replaced it (dominant land use + plot ratio). Context only; not part of the overlay or validation. |
@@ -91,9 +91,12 @@ All GeoJSON is **EPSG:4326 (lon/lat)**; areas are computed in **EPSG:3414 (SVY21
    run through the identical overlay below, no special-casing.
 4. **Overlay** forest × MP2025 **development** zones (see `DEVELOPMENT_ZONES` in
    `run_analysis.py`), keeping each fragment's `LU_DESC` and `GPR`.
-5. **Aggregate** fragments to one record per forest polygon; label by OSM `name`, else
-   nearest OSM locality; attach curated context from `site_context.py`, keyed on the
-   forest name (contributed polygons carry their own name, e.g. `Gillman Forest`).
+5. **Split** fragments into one tract per `(forest polygon × LU_DESC)` — a forest
+   crossed by several zones becomes several tracts, each with its own zoning and a
+   stable id (the largest keeps the forest's `osm_id`, siblings get a banded id). Label
+   by OSM `name`, else nearest OSM locality; attach curated context from
+   `site_context.py`, keyed on the forest name (contributed polygons carry their own
+   name, e.g. `Gillman Forest`).
 6. **Validate** against Maju Forest (by name) — the one site the method can honestly
    test. No AOI/bounding-box matching (removed as unprincipled); contributed sources
    like Gillman are input data, not validation sites.

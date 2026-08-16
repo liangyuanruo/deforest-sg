@@ -11,10 +11,17 @@ from __future__ import annotations
 import json
 import numbers
 
+import geopandas as gpd
+from shapely.geometry import Point, box
+
 from run_analysis import (
+    AREA_CRS,
     CONTRIBUTED_ID_BASE,
+    TRACT_ID_BASE,
+    aggregate_patches,
     contributed_osm_id,
     load_contributed_forest,
+    tract_osm_id,
 )
 
 
@@ -80,3 +87,63 @@ def test_missing_desc_yields_none_name_but_valid_row(tmp_path):
     assert row["name"] is None
     assert int(row["osm_id"]) == contributed_osm_id("gillman")  # collapses per-source
     assert row["geometry"].is_valid and not row["geometry"].is_empty
+
+
+# --------------------------------------------------------------------------- #
+# Per-zone tract split: a forest crossed by >1 MP2025 zone -> one tract per zone
+# --------------------------------------------------------------------------- #
+def test_tract_id_is_banded_deterministic_and_zone_specific():
+    a = tract_osm_id(42, "RESERVE SITE")
+    assert a == tract_osm_id(42, "RESERVE SITE")            # stable across runs
+    assert a >= TRACT_ID_BASE                                # above OSM + contributed ids
+    assert a < 2 ** 53                                       # JS-safe
+    assert tract_osm_id(42, "RESERVE SITE") != tract_osm_id(42, "RESIDENTIAL")
+    assert tract_osm_id(42, "RESERVE SITE") != tract_osm_id(99, "RESERVE SITE")
+
+
+def _frag_two_zones() -> gpd.GeoDataFrame:
+    """One forest polygon (osm_id 42) split by the overlay into a larger RESIDENTIAL
+    fragment and a smaller RESERVE SITE fragment (metres, EPSG:3414)."""
+    rows = [
+        {"osm_id": 42, "name": "Testville Forest", "source_layer": "natural",
+         "forest_area_ha": 5.0, "LU_DESC": "RESIDENTIAL", "GPR": "2.8",
+         "area_ha": 4.0, "geometry": box(30000, 30000, 30200, 30200)},
+        {"osm_id": 42, "name": "Testville Forest", "source_layer": "natural",
+         "forest_area_ha": 5.0, "LU_DESC": "RESERVE SITE", "GPR": "EVA",
+         "area_ha": 1.0, "geometry": box(30200, 30000, 30300, 30100)},
+    ]
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs=AREA_CRS)
+
+
+def _forest_and_localities():
+    forest = gpd.GeoDataFrame(
+        [{"osm_id": 42, "name": "Testville Forest", "forest_area_ha": 5.0,
+          "source_layer": "natural", "geometry": box(30000, 30000, 30300, 30200)}],
+        geometry="geometry", crs=AREA_CRS,
+    )
+    localities = gpd.GeoDataFrame(
+        [{"locality": "Testville", "type": "suburb", "geometry": Point(30100, 30100)}],
+        geometry="geometry", crs=AREA_CRS,
+    )
+    return forest, localities
+
+
+def test_multi_zone_forest_splits_into_one_tract_per_zone():
+    forest, localities = _forest_and_localities()
+    patches = aggregate_patches(_frag_two_zones(), forest, localities)
+
+    # One forest, two zones -> two distinct vulnerable tracts.
+    assert len(patches) == 2
+    by_zone = {r["dominant_lu_desc"]: r for _, r in patches.iterrows()}
+    assert set(by_zone) == {"RESIDENTIAL", "RESERVE SITE"}
+
+    # Each tract carries only its own zone + area; totals are preserved.
+    assert by_zone["RESIDENTIAL"]["area_ha"] == 4.0
+    assert by_zone["RESERVE SITE"]["area_ha"] == 1.0
+    assert by_zone["RESIDENTIAL"]["lu_desc_breakdown"] == {"RESIDENTIAL": 4.0}
+
+    # The largest tract keeps the bare osm_id (its share link is stable); the sibling
+    # gets a synthetic banded id. Ids are unique.
+    assert by_zone["RESIDENTIAL"]["id"] == 42
+    assert by_zone["RESERVE SITE"]["id"] == tract_osm_id(42, "RESERVE SITE")
+    assert patches["id"].is_unique

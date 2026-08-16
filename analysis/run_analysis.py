@@ -344,30 +344,59 @@ def attach_nearest_locality(gdf: gpd.GeoDataFrame,
     return gdf.merge(cent.rename("locality"), on="osm_id", how="left")
 
 
+TRACT_ID_BASE = 9_100_000_000_000  # sibling-tract ids: above the contributed band, < 2**53
+
+
+def tract_osm_id(osm_id: int, lu_desc: str) -> int:
+    """Stable, JS-safe id for a NON-primary zone tract, in a band above both OSM and
+    contributed ids so /forest/<id> links stay unique and survive re-runs. The primary
+    (largest) tract of a forest keeps the bare osm_id for backward compatibility."""
+    return TRACT_ID_BASE + zlib.crc32(f"{int(osm_id)}:{lu_desc}".encode("utf-8"))
+
+
 def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
                       localities: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Aggregate threatened fragments to one record per forest polygon (osm_id)."""
-    # Geometry: union of threatened fragments per forest polygon.
-    geom = frag.dissolve(by="osm_id")[["geometry"]]
+    """Split threatened fragments into one tract per (forest polygon x zone type).
 
-    # Per-osm_id attribute aggregates.
+    A forest crossed by more than one MP2025 zone yields one tract per LU_DESC, each a
+    distinct vulnerable area with its own zoning, geometry, and stable id — not a single
+    patch labelled by its dominant zone. Same-forest tracts share the forest name/area.
+    """
+    key = ["osm_id", "LU_DESC"]
+    # Geometry: union of threatened fragments per (forest polygon, zone type).
+    geom = frag.dissolve(by=key)[["geometry"]]
+
+    # One record per (osm_id, LU_DESC).
     rows = []
-    for osm_id, grp in frag.groupby("osm_id"):
-        by_lu = grp.groupby("LU_DESC")["area_ha"].sum().sort_values(ascending=False)
+    for (osm_id, lu), grp in frag.groupby(key):
+        area = round(float(grp["area_ha"].sum()), 4)
         gprs = sorted({str(g) for g in grp["GPR"].dropna().unique() if str(g).strip()})
         rows.append({
             "osm_id": osm_id,
-            "area_ha": round(float(grp["area_ha"].sum()), 4),
-            "dominant_lu_desc": by_lu.index[0],
-            "lu_desc_breakdown": {k: round(float(v), 4) for k, v in by_lu.items()},
+            "LU_DESC": lu,
+            "area_ha": area,
+            "dominant_lu_desc": lu,           # a tract is a single zone; field kept for schema
+            "lu_desc_breakdown": {lu: area},
             "gpr": ", ".join(gprs) if gprs else None,
         })
-    agg = pd.DataFrame(rows).set_index("osm_id")
+    agg = pd.DataFrame(rows).set_index(key)
 
-    patches = geom.join(agg)
-    patches = gpd.GeoDataFrame(patches, geometry="geometry", crs=AREA_CRS).reset_index()
+    patches = geom.join(agg).reset_index()
+    patches = gpd.GeoDataFrame(patches, geometry="geometry", crs=AREA_CRS)
 
-    # Attach forest name + full forest area.
+    # Public id: the largest tract per forest keeps the bare osm_id (its share link is
+    # stable); sibling tracts get a synthetic band id. Keyed on (osm_id, LU_DESC).
+    primary = set(
+        map(tuple, patches.sort_values("area_ha", ascending=False)
+            .drop_duplicates("osm_id")[["osm_id", "LU_DESC"]].to_numpy())
+    )
+    patches["id"] = [
+        int(oid) if (oid, lu) in primary else tract_osm_id(oid, lu)
+        for oid, lu in zip(patches["osm_id"], patches["LU_DESC"])
+    ]
+    patches["id"] = patches["id"].astype("int64")
+
+    # Attach forest name + full forest area (shared across a forest's sibling tracts).
     fmeta = forest.set_index("osm_id")[["name", "forest_area_ha", "source_layer"]]
     patches = patches.merge(fmeta, on="osm_id", how="left")
     patches["forest_area_ha"] = patches["forest_area_ha"].round(4)
@@ -397,6 +426,10 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
 
     patches = patches.sort_values("area_ha", ascending=False).reset_index(drop=True)
     patches["rank"] = patches.index + 1
+    # Ids drive selection/highlight/deep-link in the app; a collision would silently
+    # merge two tracts there. crc32 collisions are astronomically unlikely, but fail
+    # loudly if one ever happens rather than shipping a corrupt map.
+    assert patches["id"].is_unique, "tract ids collided — widen the tract-id scheme"
     return patches
 
 
@@ -627,7 +660,7 @@ def main() -> None:
     # --- write outputs ---
     # 1. Intersection result: the planned-deforestation footprint (OSM forest ∩ URA dev zones).
     threat_out = patches[[
-        "osm_id", "rank", "label", "name", "locality", "area_ha", "forest_area_ha",
+        "id", "rank", "label", "name", "locality", "area_ha", "forest_area_ha",
         "threatened_fraction", "dominant_lu_desc", "lu_desc_breakdown", "gpr",
         "centroid_lon", "centroid_lat", "source_layer", "context", "wildlife", "status",
         "geometry",
@@ -637,7 +670,6 @@ def main() -> None:
         lambda sl: "OSM_forest ∩ URA_MP2025" if sl in ("natural", "landuse")
         else "contributed_forest ∩ URA_MP2025"
     )
-    threat_out = threat_out.rename(columns={"osm_id": "id"})
     write_geojson(threat_out, RESULTS / "threatened_forests.geojson")
 
     # 2. OSM source geometry: ALL Singapore forest (threatened or not), for context.
