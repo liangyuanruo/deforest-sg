@@ -1,40 +1,30 @@
 /**
- * Pure, framework-agnostic helpers for building share links.
- *
- * Kept free of React and `window` so it can be imported from both server code
- * (the root layout's `metadataBase`) and the client `ShareButton`, and unit
- * tested without a DOM. The single source of truth for the deployed origin and
- * for how a forest is encoded in the URL (`/forest/<id>`), plus the per-channel
- * UTM tagging that Vercel Web Analytics reads.
+ * Pure, framework-agnostic share-link helpers. Kept free of React and `window`
+ * so both server code (root layout's `metadataBase`) and the client
+ * `ShareButton` can import it, unit tested without a DOM.
  */
 
-/** Last-resort origin when no Vercel domain is exposed (e.g. a non-Vercel host).
- *  Prefer {@link productionBaseUrl}, which reads the canonical domain Vercel
- *  injects, so this literal is only a fallback. */
+/** Fallback origin when no Vercel domain is exposed. Prefer
+ *  {@link productionBaseUrl}, which reads the canonical injected domain. */
 export const SITE_URL = "https://deforest-sg.vercel.app";
 
 /**
- * The canonical production origin, from the domain Vercel injects. Vercel sets
- * `VERCEL_PROJECT_PRODUCTION_URL` to the stable production domain (the custom
- * domain if one is attached, else the `*.vercel.app` one) and, for Next.js,
- * also exposes it to the browser bundle as
- * `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL`. Using the *production* domain
- * (not the per-deploy `VERCEL_URL`) means links shared from a preview deploy
- * still point at production. Returns `null` off Vercel (e.g. local dev), where
- * callers fall back to `SITE_URL` or the live `window.location.origin`.
+ * Canonical production origin, from Vercel's injected
+ * `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL` (the stable production domain, not
+ * the per-deploy `VERCEL_URL`, so preview-deploy shares still point at prod).
+ * `null` off Vercel, where callers fall back to `SITE_URL` / `window.location.origin`.
  */
 export function productionBaseUrl(): string | null {
   const host = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
   return host ? `https://${host}` : null;
 }
 
-/** Channels the share menu offers. `native` is the Web Share sheet (mobile),
- *  which is how Instagram is reached — Instagram has no link-prefill URL. */
+/** Channels the share menu offers. `native` is the Web Share sheet — how
+ *  Instagram is reached, since it has no link-prefill URL. */
 export type ShareChannel = "whatsapp" | "telegram" | "copy" | "native";
 
-/** `utm_source` value stamped per channel so shares are attributable in
- *  analytics. Kept distinct from the channel key so the analytics label can
- *  drift from the code identifier if needed. */
+/** `utm_source` per channel, kept distinct from the channel key so the
+ *  analytics label can drift from the code identifier if needed. */
 const UTM_SOURCE: Record<ShareChannel, string> = {
   whatsapp: "whatsapp",
   telegram: "telegram",
@@ -42,10 +32,8 @@ const UTM_SOURCE: Record<ShareChannel, string> = {
   native: "web_share",
 };
 
-/** The in-app path that deep-links to a forest (or the app root when none is
- *  selected). `id` is a numeric OSM id for a threatened patch or a UUID string
- *  for an already-cleared forest — both live under the one `/forest/[id]` route.
- *  Selecting a forest mirrors this into the address bar. */
+/** In-app path for a forest (or root when none selected). `id` is a numeric
+ *  OSM id (threatened) or UUID (already-cleared) — both live under `/forest/[id]`. */
 export function forestPath(id: number | string | null): string {
   return id === null ? "/" : `/forest/${id}`;
 }
@@ -66,9 +54,8 @@ export function buildShareUrl(
   return url.toString();
 }
 
-/** The human-readable message that rides along with the link on WhatsApp,
- *  Telegram, and the native share sheet. `cleared` forests are already lost, so
- *  they get past-tense phrasing; threatened patches are still at risk. */
+/** Message that rides along with the link. `cleared` forests get past-tense
+ *  phrasing; threatened patches are still at risk. */
 export function shareText(label: string | null, cleared = false): string {
   if (!label) return "Which forests will Singapore lose to development?";
   return cleared
@@ -76,8 +63,8 @@ export function shareText(label: string | null, cleared = false): string {
     : `${label} is among the Singapore forests zoned for development.`;
 }
 
-/** WhatsApp share deep-link. `wa.me/?text=` (no phone number) opens the app's
- *  share/compose sheet with the message pre-filled — works on web and mobile. */
+/** `wa.me/?text=` (no phone number) opens WhatsApp's compose sheet pre-filled,
+ *  on web and mobile. */
 export function whatsappHref(shareUrl: string, text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(`${text} ${shareUrl}`)}`;
 }

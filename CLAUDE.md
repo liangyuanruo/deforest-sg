@@ -29,42 +29,33 @@ other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
 ## Locked methodology decisions (and why)
 - **Forest source = OSM `natural='forest'` ∪ contributed (non-OSM) forest polygons**
   (`CONTRIBUTED_FOREST_SOURCES` in `run_analysis.py`: `data/gillman_forest.geojson`,
-  `data/bukit_brown.geojson`) — all normalized into the same forest
-  frame (synthetic stable numeric `osm_id`, `desc`→`name`) and run through the identical
-  MP2025 overlay, no special-casing. Same-named parts across files dissolve by `osm_id`,
-  so a file may safely repeat a patch another carries (`bukit_brown.geojson` re-includes
-  the Gillman polygons byte-identically → they union, no double count). Verified:
-  `landuse='forest'` is **empty** in this extract, and official datasets omit secondary
-  forest. Code keeps a defensive union with `landuse='forest'` but `natural` is the real
-  OSM source. (~1,142 raw OSM polygons; 831 after clipping to Singapore, plus the
-  contributed Gillman + Bukit Brown polygons → 833 total.) A
-  spike confirmed Gillman's forest is **0.00 ha** overlap with OSM `natural=forest` —
-  genuinely absent from OSM, not a tagging bug, which is why it needed a contributed
-  source rather than a fix to the OSM query. **Why OSM, not official data:** no authoritative
-  *vector* dataset of Singapore's secondary forests exists — NParks/data.gov.sg vectors
-  map only gazetted spaces; the URA plan encodes zoning *intent*, not ground cover; OSM
-  contributors trace satellite imagery into `natural=forest` polygons (physical reality,
-  pre-vectorized). The only authoritative alternative is satellite land-cover *rasters*
-  (ESA WorldCover, Google Dynamic World, Hansen) needing raster→vector conversion +
-  cleanup. Full write-up in `analysis/README.md §7` and the app's About dialog.
+  `data/bukit_brown.geojson`) — normalized into the same forest frame (synthetic
+  `osm_id`, `desc`→`name`) and run through the identical MP2025 overlay, no
+  special-casing. Same-named parts across files dissolve by `osm_id`, so a file may
+  safely repeat a patch another carries (`bukit_brown.geojson` re-includes Gillman
+  byte-identically → unions, no double count). `landuse='forest'` is verified
+  **empty** in this extract; `natural` is the real OSM source. (~1,142 raw OSM
+  polygons; 831 after clipping to Singapore, plus Gillman + Bukit Brown → 833
+  total.) Gillman's forest is **0.00 ha** overlap with OSM `natural=forest` —
+  genuinely absent, not a tagging bug — hence the contributed source. **Why OSM,
+  not official data:** no authoritative vector dataset of secondary forest exists;
+  official layers map only gazetted spaces and URA zoning encodes *intent*, not
+  ground cover. Full rationale in `analysis/README.md §7` and the app's About dialog.
 - **Scope = planned footprint under MP2025**, i.e. standing forest on development-zoned
   land. **Not** a delta vs MP2019 — the user explicitly does not want an "increase"
   claim, just what is planned.
 - **CRS**: compute areas in **EPSG:3414** (SVY21, metres); export geometry in
   **EPSG:4326** (lon/lat) for web maps. (The original briefing's EPSG:3414 export was
   wrong for web rendering — corrected.)
-- **Split each forest into one tract per zone type.** After the overlay, fragments are
-  grouped by `(forest polygon × LU_DESC)`, not dissolved to one patch per forest. A
-  forest crossed by more than one MP2025 zone yields several tracts, each a distinct
-  vulnerable area with its own `LU_DESC`, `GPR`, geometry, and id (e.g. Bukit Brown →
-  RESIDENTIAL + RESERVE SITE + ROAD). Zone tracts below `FOLD_FLOOR_HA` (0.05 ha) fold
-  into their forest's largest tract (`fold_slivers`) so hairline ROAD/UTILITY strips and
-  overlay artifacts don't become their own features — area moves into the keeper, totals
-  conserved, no geometry work (it just relabels sub-floor fragments before the existing
-  dissolve). A forest whose *only* threatened area is a sliver keeps that lone tract
-  (nothing larger to fold into). Ids: the largest tract per forest keeps the bare
-  `osm_id` (share links stay stable); sibling tracts get a synthetic id in a band above
-  the contributed range (`tract_osm_id`).
+- **Split each forest into one tract per zone type.** Fragments group by `(forest
+  polygon × LU_DESC)`, not dissolved to one patch per forest — a forest crossed by
+  several MP2025 zones yields several tracts (e.g. Bukit Brown → RESIDENTIAL +
+  RESERVE SITE + ROAD), each with its own zoning, geometry, and id. Zone tracts
+  below `FOLD_FLOOR_HA` (0.05 ha) fold into their forest's largest tract
+  (`fold_slivers`) so hairline strips/artifacts don't become their own features —
+  area moves into the keeper, totals conserved (relabel only, no geometry work). A
+  sliver-only forest keeps its lone tract. Ids: the largest tract keeps the bare
+  `osm_id` (stable share links); siblings get a banded synthetic id (`tract_osm_id`).
 - **Every affected area carries a name** (OSM `name`, else nearest OSM locality) and,
   where known, curated context from `analysis/site_context.py`.
 - **Output all three geometry layers** (OSM forest, URA dev zones, intersection), each
@@ -95,16 +86,15 @@ other patch, no special-casing: it reports as a ~12.65 ha vulnerable patch
   filter to inside the Singapore mask).
 
 ## Validation gate (must stay green)
-`results/validation.json` → `overall_pass` must be `true`. It rests on a **single site**:
-Maju Forest recovers by OSM name (~21.7 ha on dev-zoned land). If it goes false, the
-tagging assumption is wrong — fix before trusting discovery output. **No AOI / bounding-box
-site matching** — an earlier "Gillman Barracks by bbox" check was removed as unprincipled
-(a lon/lat box aligns to nothing on the ground and mislabels neighbouring slivers of the
-same forest) and stays removed. That's a different question from the Aug 2026 change
-that ingests Gillman's actual forest polygon (`data/gillman_forest.geojson`) as a
-**contributed data source**: the overlay measures it like any other patch (~12.65 ha
-vulnerable, RESIDENTIAL) with no special assertion and **no change to this gate** —
-Gillman is input data, not a validation site.
+`results/validation.json` → `overall_pass` must be `true`. Rests on a **single
+site**: Maju Forest recovers by OSM name (~21.7 ha on dev-zoned land). If false,
+the tagging assumption is wrong — fix before trusting discovery output. **No AOI /
+bounding-box site matching** — an earlier "Gillman Barracks by bbox" check was
+removed as unprincipled (a lon/lat box aligns to nothing on the ground and
+mislabels neighbouring slivers) and stays removed. Ingesting Gillman's actual
+forest polygon as a **contributed data source** is a separate, later change: it
+runs through the same overlay (~12.65 ha vulnerable, RESIDENTIAL) with no special
+assertion and **no change to this gate** — Gillman is input data, not a validation site.
 
 ## Run
 ```bash

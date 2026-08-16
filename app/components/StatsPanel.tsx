@@ -26,10 +26,8 @@ import type { ThreatenedProperties } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
 /**
- * The map-key rows' identities (swatch + label), reused from MAP_LAYERS so the key
- * and the map legend can't drift. Both non-null: fixed members of MAP_LAYERS. The
- * "Deforested" scar is theme-flipped on the map (near-white / dark grey); its
- * MAP_LAYERS swatch is the neutral mid-grey both the filter legend and this key use.
+ * Map-key rows' identities (swatch + label), reused from MAP_LAYERS so the key
+ * and the map legend can't drift. Both non-null: fixed members of MAP_LAYERS.
  */
 const THREATENED_KEY = MAP_LAYERS.find((l) => l.key === "threatened")!;
 const LOST_KEY = MAP_LAYERS.find((l) => l.key === "lost")!;
@@ -39,26 +37,18 @@ export interface StatsPanelProps {
   sites: ThreatenedProperties[];
   /** summary.totals.total_forest_ha_sg — denominator for "% of mapped forest". */
   totalForestHa: number;
-  /**
-   * How the threatened layer is coloured on the map. In "status" mode every patch
-   * is the alarm red, so the panel shows the map key ("Vulnerable forest" red +
-   * "Deforested" grey); in "landuse" mode both layers take their zoning colours,
-   * which the breakdown below already keys, so the key is omitted.
-   */
+  /** Threatened-layer colour mode. "status" shows the map key (red/grey); in
+   *  "landuse" both layers take zoning colours the breakdown already keys, so
+   *  the key is omitted. */
   colorMode: ColorMode;
-  /** Current app theme — the "Deforested" scar swatch is theme-flipped, so the key
-   *  resolves its colour per theme (via swatchForLayer) to match the map fill. */
+  /** App theme — the "Deforested" scar is theme-flipped, so the key resolves its
+   *  colour per theme (via swatchForLayer) to match the map fill. */
   theme: Theme;
   className?: string;
 }
 
-/**
- * Compact, left-aligned stats overlay. Headline is always visible; the
- * breakdown collapses (default collapsed on small screens) so it never eats
- * the map on a phone.
- */
-/** Shared aggregation so the headline and the breakdown (and the desktop card
- *  and mobile sheet that host them) all read the same numbers. */
+/** Shared aggregation so the headline, breakdown, desktop card, and mobile
+ *  sheet all read the same numbers. */
 function useStatsAgg(sites: ThreatenedProperties[], totalForestHa: number) {
   return useMemo(() => {
     const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
@@ -75,10 +65,9 @@ export function StatsPanel({
   theme,
   className,
 }: StatsPanelProps) {
-  // Collapsed by default on small screens so the breakdown never covers the
-  // map on a phone. This panel only mounts client-side (Explorer renders it
-  // once data is ready, i.e. never during SSR), so reading the viewport in the
-  // lazy initializer is safe and correct from the first paint.
+  // Collapsed by default on small screens so the breakdown never covers the map.
+  // Only mounts client-side (never during SSR), so reading the viewport in the
+  // lazy initializer is safe from the first paint.
   const [expanded, setExpanded] = useState(
     () =>
       typeof window === "undefined" ||
@@ -122,14 +111,13 @@ export function StatsPanel({
 }
 
 /**
- * The always-visible headline: total hectares under threat, in words + football
- * fields. Presentational (no button/chevron) so it can sit inside the desktop
- * card's toggle button or the mobile sheet's peek header alike.
+ * Always-visible headline: total hectares under threat, in words + football
+ * fields. Presentational, so it can sit inside the desktop card's toggle button
+ * or the mobile sheet's peek header alike.
  *
- * Pass `totalForestHa` to also show the "% of mapped forest" and "sites" figures
- * inline on the right — used by the mobile sheet's peek so those numbers stay
- * visible even when the sheet is dragged down (the desktop card omits it, keeping
- * those figures in its expandable breakdown instead).
+ * Pass `totalForestHa` to also show "% of mapped forest" / "sites" inline —
+ * used by the mobile sheet's peek so those stay visible even when dragged down
+ * (the desktop card keeps them in its expandable breakdown instead).
  */
 export function StatsHeadline({
   sites,
@@ -188,11 +176,9 @@ export function StatsBreakdown({
   /** Suppress the "% of mapped forest" / "sites" figures — set by the mobile
    *  sheet, whose peek headline already shows them, to avoid repeating them. */
   hideFigures?: boolean;
-  /** Suppress the map-key rows (vulnerable-forest red + deforested grey) — set by
-   *  the mobile sheet. They appear only in "status" mode, so toggling colour mode
-   *  would change the sheet's content height and make the draggable sheet
-   *  re-measure and re-animate (a visible flicker). Omitting them keeps the sheet
-   *  height stable across the toggle; the peek headline already conveys the layers. */
+  /** Suppress the map-key rows — set by the mobile sheet, where a "status"-only
+   *  key would change content height and make the draggable sheet visibly
+   *  re-measure/re-animate on colour-mode toggle. */
   hideStatusKey?: boolean;
 }) {
   const { threatenedHa, siteCount, fraction, slices } = useStatsAgg(
@@ -209,12 +195,9 @@ export function StatsBreakdown({
         </div>
       )}
 
-          {/* Map key. In "status" mode the threatened patches are the alarm red and
-              the already-cleared scars the neutral grey, so these rows say what each
-              colour on the map means. Omitted in "landuse" mode, where both layers
-              take the zoning colours the breakdown below already keys. Sits in its
-              own bordered zone (square swatches, unlike the breakdown's round dots)
-              so it doesn't read as a breakdown item. */}
+          {/* Map key: what the alarm-red / neutral-grey fills mean in "status" mode.
+              Omitted in "landuse" mode (breakdown below already keys those colours).
+              Square swatches, unlike the breakdown's round dots. */}
           {colorMode === "status" && !hideStatusKey && (
             <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5 text-[11px]">
               <MapKeyRow

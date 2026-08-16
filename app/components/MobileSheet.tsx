@@ -46,9 +46,8 @@ export function MobileSheet({
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState({ vh: 0, headerH: 0, contentH: 0 });
-  // Live translateY while dragging (px); null when at rest, where the position
-  // is derived from the controlled `snap` instead. Keeping the rest position
-  // derived (not stored) avoids syncing state in an effect.
+  // Live translateY while dragging; null at rest, where position derives from
+  // the controlled `snap` instead (avoids syncing state in an effect).
   const [dragTy, setDragTy] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const drag = useRef<{
@@ -58,13 +57,10 @@ export function MobileSheet({
     moved: boolean;
   } | null>(null);
 
-  // Measure the viewport, the header (peek height), and the natural content
-  // height so the sheet can size itself to its content and the snap offsets
-  // track the real layout. Re-runs when the content or peek changes, or on
-  // resize. We measure a non-stretching inner wrapper (`contentRef`) rather than
-  // the scroll container: the container is `flex-1`, so its own height reflects
-  // the panel, not the content, whereas the inner wrapper is only as tall as
-  // what it holds — and so can't feed back on the panel height it drives.
+  // Measure viewport/header/content so the sheet sizes to its content and snap
+  // offsets track real layout. Measures the non-stretching inner wrapper
+  // (`contentRef`), not the `flex-1` scroll container — the container's height
+  // reflects the panel, not the content, so it would feed back on itself.
   useLayoutEffect(() => {
     const measure = () => {
       const headerH = headerRef.current?.getBoundingClientRect().height ?? 72;
@@ -76,10 +72,8 @@ export function MobileSheet({
       setMetrics({ vh: window.innerHeight, headerH, contentH: headerH + bodyH });
     };
     measure();
-    // Re-measure whenever the header or content actually changes size — covers
-    // late reflows the one-shot measure would miss (web-font load, text
-    // wrapping). Both refs are non-stretching, so this can't feed back on the
-    // panel height it drives.
+    // Re-measure on size change — covers late reflows (web-font load, text
+    // wrapping) the one-shot measure would miss.
     const ro = new ResizeObserver(measure);
     if (headerRef.current) ro.observe(headerRef.current);
     if (contentRef.current) ro.observe(contentRef.current);

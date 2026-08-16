@@ -110,31 +110,23 @@ def singapore_mask(mp: gpd.GeoDataFrame):
 # --------------------------------------------------------------------------- #
 # Geometry cleaning — OSM spike removal
 # --------------------------------------------------------------------------- #
-# A "spike" (needle) is an OSM digitizing artefact: a single vertex dragged far
-# from the polygon body so the ring runs out and straight back, leaving a long
-# zero-ish-width spur. `make_valid()` does NOT remove these (a thin triangle is
-# topologically valid), so they inflate areas and render as long lines on the map.
-# Real example fixed by this: osm_id 863261572 ("Unnamed forest near Malcolm") had
-# one vertex ~4 km south of the rest, inflating its area by ~3.3 ha.
+# A "spike" is an OSM digitizing artefact: a vertex dragged far from the polygon
+# body and back, leaving a thin spur that `make_valid()` doesn't remove (it's
+# topologically valid) and that inflates area. Example: osm_id 863261572 had a
+# vertex ~4 km south, inflating its area by ~3.3 ha.
 #
-# Thresholds are deliberately conservative so genuine geometry is never trimmed:
-# a tip is removed only when BOTH incident edges exceed SPIKE_MIN_SPUR_M *and* the
-# out-and-back detour is more than SPIKE_MAX_RATIO times the straight gap between
-# the tip's neighbours. Traced forest boundaries have vertices tens of metres apart,
-# so a >500 m spur that returns to a near point is unambiguously an error, not a
-# legitimate long boundary edge (those have their neighbours far apart -> low ratio).
+# A tip is removed only when both incident edges exceed SPIKE_MIN_SPUR_M *and* the
+# out-and-back detour exceeds SPIKE_MAX_RATIO times the straight gap between its
+# neighbours — traced boundaries have vertices tens of metres apart, so a >500 m
+# spur back to a near point is unambiguously an error, not a legitimate long edge.
 SPIKE_MIN_SPUR_M = 500.0
 SPIKE_MAX_RATIO = 8.0
 
 
 def _despike_ring(coords, min_spur_m: float, max_ratio: float):
-    """Drop single-vertex needle tips from one closed ring's coordinate sequence.
-
-    A tip is a vertex whose two incident edges are both long yet return to a near
-    point (the OSM mis-dragged-node artefact). Iterated, so a spike exposed by
-    removing an adjacent tip is stripped too. Returns the cleaned closed ring (first
-    point repeated), or ``None`` if it collapses below a triangle. Coordinates must
-    be in a metric CRS (distances are treated as metres).
+    """Drop needle-tip vertices from one closed ring, iterating so a spike exposed
+    by removing a neighbour is stripped too. Returns the cleaned ring, or ``None``
+    if it collapses below a triangle. Coordinates must be metric (distances in metres).
     """
     ring = [tuple(c) for c in coords]
     if len(ring) > 1 and ring[0] == ring[-1]:
@@ -218,17 +210,14 @@ def contributed_osm_id(name: str) -> int:
 
 
 def load_contributed_forest(path, source_layer) -> gpd.GeoDataFrame:
-    """Normalize a contributed forest geojson to the forest frame shape the OSM
-    path produces: columns [osm_id, name, source_layer, geometry] in EPSG:3414.
-    Provenance is uncertain and fields vary, so depend ONLY on geometry (+ optional
-    `desc` -> name); synthesize everything else. GPR/LU_DESC are intentionally NOT
-    read from the file — the pipeline derives them from the MP2025 overlay like
-    every patch.
+    """Normalize a contributed forest geojson to the OSM forest frame: columns
+    [osm_id, name, source_layer, geometry] in EPSG:3414. Provenance is uncertain, so
+    depend only on geometry (+ optional `desc` -> name); GPR/LU_DESC are deliberately
+    NOT read from the file — derived from the MP2025 overlay like every patch.
 
     ponytail: contributed sources are assumed spatially disjoint from OSM forest
     (verified 0.00 ha overlap for Gillman), so we whole-add with no de-duplication.
-    If a future source overlaps OSM forest, difference it against the OSM forest
-    union before adding — that is the upgrade path.
+    If a future source overlaps OSM forest, difference it against the OSM union first.
     """
     gdf = gpd.read_file(path, engine="pyogrio").to_crs(AREA_CRS)
     gdf["geometry"] = gdf.geometry.make_valid()
@@ -254,15 +243,14 @@ def load_forest(mask) -> gpd.GeoDataFrame:
         frames.append(lu_forest.assign(source_layer="landuse"))
     forest = pd.concat(frames, ignore_index=True)
     forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=nat.crs).to_crs(AREA_CRS)
-    # Contributed (non-OSM) forest sources join here, already in EPSG:3414, so they
-    # reuse the SAME make_valid/despike/clip/dissolve cleaning below — no special path.
-    # OSM-only columns become NaN for contributed rows; they're dropped before overlay.
+    # Contributed sources join here (already EPSG:3414) and reuse the same
+    # make_valid/despike/clip/dissolve cleaning below; OSM-only columns become NaN
+    # for these rows and are dropped before the overlay.
     contributed = [load_contributed_forest(DATA / f, layer) for f, layer in CONTRIBUTED_FOREST_SOURCES]
     forest = pd.concat([forest, *contributed], ignore_index=True)
     forest = gpd.GeoDataFrame(forest, geometry="geometry", crs=AREA_CRS)
     forest["geometry"] = forest.geometry.make_valid()
-    # Strip OSM digitizing spikes (needle vertices placed far from the polygon body)
-    # before they inflate areas and render as long spurs. Runs in metric EPSG:3414.
+    # Strip OSM digitizing spikes before they inflate areas (metric EPSG:3414).
     forest["geometry"] = forest.geometry.apply(despike_geometry)
     forest = forest[forest.geometry.notna() & ~forest.geometry.is_empty].copy()
     forest["geometry"] = forest.geometry.make_valid()
@@ -273,9 +261,8 @@ def load_forest(mask) -> gpd.GeoDataFrame:
     forest = forest[forest.geometry.geom_type.isin(["Polygon", "MultiPolygon"])].copy()
     forest = forest.dissolve(by="osm_id", aggfunc={"name": "first", "source_layer": "first"}).reset_index()
     forest["forest_area_ha"] = forest.geometry.area / 1e4
-    # Apply curated display names to polygons OSM never named (exact osm_id, not a
-    # bbox; see site_context.FOREST_NAME_OVERRIDES). Only fills where OSM is blank,
-    # so real OSM names (incl. the validated "Maju Forest") are never overwritten.
+    # Curated display names for polygons OSM never named (exact osm_id, not a bbox;
+    # see site_context.FOREST_NAME_OVERRIDES). Only fills where OSM is blank.
     forest["name"] = forest.apply(
         lambda r: r["name"]
         if isinstance(r["name"], str) and r["name"].strip()
@@ -357,15 +344,10 @@ def tract_osm_id(osm_id: int, lu_desc: str) -> int:
 
 def fold_slivers(frag: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Relabel sub-FOLD_FLOOR_HA zone fragments to their forest's largest zone, so thin
-    ROAD/UTILITY strips and overlay artifacts don't become their own tracts.
-
-    No geometry work: this only rewrites LU_DESC on the fragments below the floor, and
-    the caller's existing dissolve then unions the folded geometry into the keeper for
-    free. Totals are conserved (area moves into the keeper, never dropped); the keeper is
-    the largest tract and is never folded, so a forest whose only threatened area is a
-    sliver keeps that lone tract. Runs on a copy so the caller's frag (true by-LU_DESC
-    summary + validation) keeps real zoning. Vectorized over fragments — bounded by the
-    tiny forest set, no per-forest loop."""
+    ROAD/UTILITY strips don't become their own tracts. Only rewrites LU_DESC — the
+    caller's existing dissolve unions the folded geometry into the keeper for free, so
+    totals are conserved and a forest whose only threat area is a sliver keeps it. Runs
+    on a copy so the caller's frag keeps real zoning for validation."""
     frag = frag.copy()
     tract_area = frag.groupby(["osm_id", "LU_DESC"])["area_ha"].transform("sum")
     keeper_lu = (frag.groupby(["osm_id", "LU_DESC"])["area_ha"].sum()
@@ -378,13 +360,10 @@ def fold_slivers(frag: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
                       localities: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Split threatened fragments into one tract per (forest polygon x zone type).
-
-    A forest crossed by more than one MP2025 zone yields one tract per LU_DESC, each a
-    distinct vulnerable area with its own zoning, geometry, and stable id — not a single
-    patch labelled by its dominant zone. Same-forest tracts share the forest name/area.
-    Sub-floor zone slivers are folded into the forest's largest tract first.
-    """
+    """Split threatened fragments into one tract per (forest polygon x zone type) — a
+    forest crossed by several MP2025 zones yields one tract per LU_DESC, not a single
+    patch labelled by its dominant zone. Sub-floor slivers fold into the forest's
+    largest tract first (fold_slivers)."""
     frag = fold_slivers(frag)
     key = ["osm_id", "LU_DESC"]
     # Geometry: union of threatened fragments per (forest polygon, zone type).
@@ -458,17 +437,11 @@ def aggregate_patches(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
 
 
 def annotate_deforested(deforested: gpd.GeoDataFrame, mp: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Annotate each already-cleared forest with its URA MP2025 zoning.
-
-    The two hand-traced polygons (Tengah Forest, Dover Forest East) are secondary
-    forest that has *already* been cleared for development. Unlike the threatened
-    overlay, we keep the original cleared footprint as geometry and only *read* the
-    masterplan beneath it: overlay against MP2025 to get the area-weighted dominant
-    land-use (LU_DESC) and the set of plot ratios (GPR) — the same attribute logic
-    aggregate_patches uses for threatened patches. Cost is bounded by these 2
-    polygons: an sjoin first narrows MP2025 to the handful of parcels they touch
-    (same pattern as involved_development_zones), then overlay runs on that subset.
-    """
+    """Annotate each already-cleared forest (Tengah Forest, Dover Forest East) with its
+    URA MP2025 zoning. Keeps the original cleared footprint as geometry and only reads
+    the masterplan beneath it — same dominant-LU_DESC/GPR logic as aggregate_patches.
+    Cost bounded by an sjoin narrowing MP2025 to the parcels these 2 polygons touch,
+    same pattern as involved_development_zones."""
     d = deforested.copy()
     # The curated input carries an OSM-style `@id` — a stable UUID per cleared
     # forest. Keep it as `uid`: it's the share/deep-link identifier the app routes
@@ -515,11 +488,9 @@ def annotate_deforested(deforested: gpd.GeoDataFrame, mp: gpd.GeoDataFrame) -> g
 # Validation
 # --------------------------------------------------------------------------- #
 def validate(frag: gpd.GeoDataFrame, forest: gpd.GeoDataFrame) -> dict:
-    """Sanity-check the method against the one publicly-announced site it can
-    actually test: Maju Forest, a *named* secondary forest that the pipeline must
-    recover by its OSM name. (Gillman Barracks — the other announced site — is
-    excluded: it is mostly redevelopment of the historic barracks, not forest
-    clearance, so a forest overlay can't honestly claim to recover it.)"""
+    """Sanity-check the method against the one site it can honestly test: Maju Forest,
+    recovered by OSM name. Gillman Barracks is excluded — it's mostly historic-barracks
+    redevelopment, not forest clearance, so a forest overlay can't claim to recover it."""
     sites = []
 
     # Maju Forest — recover by OSM name (a named forest polygon exists).
@@ -616,12 +587,9 @@ def build_summary(patches: gpd.GeoDataFrame, forest: gpd.GeoDataFrame,
 
 
 def _json_safe(obj):
-    """Recursively replace non-finite floats (NaN/Inf) with None.
-
-    pandas/numpy leave NaN in optional fields (e.g. unnamed sites' context/wildlife/
-    status). A bare ``NaN`` token is not valid JSON and breaks strict consumers such as
-    browsers' ``JSON.parse`` (the web app fetches these files), so emit ``null`` instead.
-    """
+    """Recursively replace non-finite floats (NaN/Inf) with None. pandas/numpy leave
+    NaN in optional fields (e.g. unnamed sites' context); a bare NaN token isn't valid
+    JSON and breaks JSON.parse, so emit null instead."""
     if isinstance(obj, float):
         return obj if math.isfinite(obj) else None
     if isinstance(obj, dict):

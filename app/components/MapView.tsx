@@ -65,11 +65,8 @@ export interface MapViewProps {
   className?: string;
 }
 
-/**
- * Fixed opening camera, shared by both basemaps (Standard and Satellite) — tuned
- * to frame Singapore. `setStyle` preserves the camera, so switching basemap keeps
- * this exact view; it's only set once, at mount.
- */
+/** Opening camera, tuned to frame Singapore. Shared across basemaps — `setStyle`
+ *  preserves it on swap. Set once, at mount. */
 const CAMERA = {
   center: [103.79075, 1.36602] as [number, number],
   zoom: 11.74,
@@ -78,16 +75,10 @@ const CAMERA = {
 };
 
 /**
- * Mapbox Standard `basemap` config: a neutral, desaturated grey treatment (muted
- * greens for greenspace, grey water/roads/buildings, dark labels) so the
- * threatened-forest overlay stays the focus. Applies only to the Standard vector
- * style — the Satellite option is a raster style and ignores it — and is
- * re-applied after every setStyle swap back to Standard (a swap resets config to
- * the style's defaults).
- *
- * The `show*` flags are theme-invariant (they strip distractions in both modes);
- * only the colours + `lightPreset` differ for dark, so the dark variant below
- * spreads this base and overrides just those. This is the light (`day`) config.
+ * Standard `basemap` config: neutral desaturated grey so the forest overlay stays
+ * the focus. Vector-style only (Satellite ignores it); re-applied after every
+ * setStyle swap, which resets config to defaults. `show*` flags are
+ * theme-invariant; the dark variant below spreads this and overrides colours only.
  */
 const STANDARD_BASEMAP_CONFIG = {
   lightPreset: "day",
@@ -118,13 +109,10 @@ const STANDARD_BASEMAP_CONFIG = {
 };
 
 /**
- * Dark-mode counterpart, applied when the app is in dark mode so the Street
- * basemap matches the chrome instead of glaring white. Same distraction-stripping
- * `show*` flags (spread from the light config); the ground goes near-black, labels
- * flip to light grey so they read on it, and greenspace becomes a desaturated dark
- * green — keeping the muted, low-contrast character so the red overlay still leads.
- * `lightPreset: "night"` shifts Standard's base render dark beneath these overrides.
- * Satellite is raster imagery with no config, so dark mode leaves it untouched.
+ * Dark-mode counterpart so the Street basemap matches dark chrome instead of
+ * glaring white. Spreads the light config's `show*` flags; ground/labels/
+ * greenspace go dark, and `lightPreset: "night"` shifts Standard's base render.
+ * Satellite has no config, so dark mode leaves it untouched.
  */
 const STANDARD_BASEMAP_CONFIG_DARK = {
   ...STANDARD_BASEMAP_CONFIG,
@@ -177,13 +165,10 @@ function asFeatureCollection(
 }
 
 /**
- * True on phone-width viewports — the same `(max-width: 639px)` boundary at which
- * the draggable detail bottom-sheet (`MobileSheet`, `sm:hidden`) replaces the
- * desktop panel. Evaluated per call (not cached) so it stays correct across
- * rotation / resize / devtools emulation. Two map behaviours key on it: the
- * flyTo padding (below), and popup suppression — on touch there's no true hover,
- * so a tap fires a synthetic `mousemove`; the sheet already carries the tapped
- * patch's details, so a lingering hover popup on top of it is just noise.
+ * True on phone-width viewports (`<=639px`, matching `MobileSheet`'s `sm:hidden`
+ * breakpoint). Evaluated per call so it tracks rotation/resize. Gates flyTo
+ * padding and popup suppression — a touch tap fires a synthetic `mousemove`, and
+ * the sheet already shows the tapped patch, so a hover popup on top is just noise.
  */
 function isMobileViewport(): boolean {
   return (
@@ -198,57 +183,42 @@ function threatenedFilter(ids: number[] | null): mapboxgl.FilterSpecification | 
 }
 
 // --- threatened-layer paint, per colour mode -----------------------------
-// Polygons are drawn as fills only (no outlines); selection/hover therefore read
-// entirely through colour and opacity below.
-// feature-state predicates reused across the expressions below.
+// Fills only, no outlines — selection/hover read entirely through colour/opacity.
 const SELECTED = ["boolean", ["feature-state", "selected"], false];
 const HOVER = ["boolean", ["feature-state", "hover"], false];
 
-// "status": every threatened patch reads the same alarm red; the selected patch
-// jumps to a heatwave-scale purple (the extreme-danger end of a temperature ramp)
-// so the affected area stands out against the red field.
+// "status": every patch reads alarm red; the selected patch jumps to heatwave
+// purple so it stands out against the red field.
 const STATUS_FILL_COLOR = ["case", SELECTED, "#9333ea", "#dc2626"];
 const STATUS_FILL_OPACITY = ["case", SELECTED, 0.72, HOVER, 0.62, 0.42];
 
-// "landuse": each patch its own URA colour (never repainted by selection —
-// colour follows the entity). Selection reads via an opacity bump; the base
-// opacity is a touch higher so the pale/white URA fills (ROAD, WHITE,
-// EDUCATIONAL) still read over the basemap.
+// "landuse": each patch keeps its own URA colour; selection reads via an opacity
+// bump instead of a recolour (colour follows the entity).
 const LANDUSE_FILL_OPACITY = ["case", SELECTED, 0.82, HOVER, 0.7, 0.6];
 
-// Every polygon fill only carries transparency so the Satellite basemap's imagery
-// reads through it. The Standard basemap has no imagery to preserve, so the fills
-// paint solid there — for the threatened layer, selection still reads via colour
-// (status → purple). Opacity is therefore basemap-dependent across all fill
-// layers (threatened, forest wash, zones wash).
+// Fills carry transparency so Satellite imagery reads through; Standard has no
+// imagery to preserve, so fills paint solid there and selection reads via colour.
 const SOLID_FILL_OPACITY = 1;
 
 // Satellite-tuned opacities for the two context washes.
 const FOREST_FILL_OPACITY = 0.14;
 const ZONES_FILL_OPACITY = 0.28;
 
-// Already-cleared forests read as bleached "scars" of lost biodiversity: a
-// theme-flipped neutral (near-white on the dark app theme, dark grey on the light
-// one) so they stand out in both. Higher opacity than the context washes above so
-// they read as a solid loss, but still let the Satellite imagery show through.
+// Cleared forests read as bleached "scars": theme-flipped neutral (near-white
+// dark / dark-grey light), higher opacity than the context washes so they read
+// as a solid loss.
 const LOST_FILL_OPACITY = 0.6;
-// The base scar colour is LOST_FILL_COLOR (shared with the legend — single source
-// of truth, so the map fill and the key swatch can't drift). Only the *selected*
-// extreme lives here: selecting a cleared forest nudges the neutral toward pure
-// white (dark) / near-black (light) so the chosen scar reads as picked in both
-// basemaps — the lost layer's analogue of the threatened status→purple cue, and a
-// map-only cue with no legend counterpart.
+// Base colour is LOST_FILL_COLOR (shared with the legend). Only the *selected*
+// extreme lives here — nudges toward pure white/near-black so the picked scar
+// reads in both basemaps.
 const LOST_SELECTED: Record<Theme, string> = {
   dark: "#ffffff",
   light: "#18181b",
 };
 /**
- * The already-cleared fill's colour. In "landuse" mode it paints each scar its
- * URA zoning colour (the dominant land use that replaced the forest) — matching
- * the threatened layer, so the whole map recolours to zoning together; colour
- * follows the entity, so selection reads via opacity there, not a recolour. In
- * "status" mode it's the theme-flipped scar neutral (LOST_FILL_COLOR),
- * `selected`-aware via LOST_SELECTED.
+ * Cleared-fill colour. "landuse" mode paints each scar its URA zoning colour
+ * (matching the threatened layer); "status" mode uses the theme-flipped scar
+ * neutral, `selected`-aware via LOST_SELECTED.
  */
 function lostFillColor(theme: Theme, mode: ColorMode): unknown {
   if (mode === "landuse") return landUseFillExpression("dominant_lu_desc");
@@ -271,10 +241,8 @@ function contextFillOpacity(basemap: Basemap, satelliteOpacity: number): number 
 }
 
 /**
- * Push the paint for the active colour mode onto the threatened layer. The
- * already-cleared scars recolour to their URA zoning in "landuse" mode too, but
- * that's owned by the theme effect (keyed on theme + mode) so the scar-neutral
- * re-tint and the zoning recolour share one code path.
+ * Push the active colour mode's paint onto the threatened layer. Cleared scars'
+ * "landuse" recolour is owned by the theme effect instead, so both share one path.
  */
 function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
   const isLandUse = mode === "landuse";
@@ -291,21 +259,18 @@ function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
 }
 
 /**
- * Sync the URA development-zones layer to visibility. Each parcel is painted its
- * URA zoning colour (keyed on `lu_desc`), giving the threatened patch its
- * surrounding parcel's intended use. The fill shows whenever the layer is on (in
- * both colour modes) — with outlines removed it's the layer's only rendering.
+ * Sync the URA zones layer to visibility. Each parcel paints its zoning colour
+ * (keyed on `lu_desc`); with outlines removed, the fill is its only rendering.
  */
 function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility) {
   map.setLayoutProperty(LYR.zonesFill, "visibility", layers.zones ? "visible" : "none");
 }
 
 /**
- * (Re)install every source + layer and apply the current filter / visibility /
- * colour mode / selection. Idempotent against a freshly-loaded style, so it runs
- * both on first `load` and after each `setStyle` basemap swap (which wipes all
- * custom sources and layers). Interaction handlers are *not* attached here — they
- * live on the map object and survive a style swap, so they're bound once.
+ * (Re)install every source + layer and apply current filter/visibility/colour/
+ * selection. Idempotent, so it runs on first `load` and after each `setStyle`
+ * swap (which wipes custom sources/layers). Interaction handlers live on the map
+ * object and survive a swap, so they're bound once, elsewhere.
  */
 function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basemap) {
   map.addSource(SRC.forest, {
@@ -323,19 +288,15 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     data: asFeatureCollection(p.developmentZones),
     promoteId: "id",
   });
-  // The lost layer promotes `uid` (not `id`): the UUID is the selection /
-  // share / deep-link key, so feature-state must key on it too.
+  // Lost layer promotes `uid`, not `id` — the UUID is its selection/share key.
   map.addSource(SRC.lost, {
     type: "geojson",
     data: asFeatureCollection(p.deforested),
     promoteId: "uid",
   });
 
-  // Every data fill is fully emissive so the Standard basemap's lighting model
-  // (notably the dark `night` preset) can't mute it — the overlay reads at its
-  // true colour in both day and night. Harmless on the Satellite raster style,
-  // which has no lighting. Without this, `night` renders the red patches as dark
-  // maroon and the green wash as near-black.
+  // Emissive so Standard's `night` lighting can't mute the overlay colours
+  // (otherwise red renders dark maroon, green near-black). Harmless on Satellite.
   map.addLayer({
     id: LYR.forestFill,
     type: "fill",
@@ -350,20 +311,15 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     id: LYR.zonesFill,
     type: "fill",
     source: SRC.zones,
-    // Painted per parcel from the URA palette (keyed on `lu_desc`); shown
-    // whenever the layer is on via syncZones. Sits below the threatened fill so
-    // each patch still paints on top of its surrounding parcel.
+    // Sits below the threatened fill so each patch paints on top of its parcel.
     paint: {
       "fill-color": landUseFillExpression("lu_desc") as never,
       "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
       "fill-emissive-strength": 1,
     },
   });
-  // Already-cleared forests sit above the context washes but below the headline
-  // vulnerable-red fill. Theme-driven colour (near-white dark / dark-grey light) is
-  // set here and kept in sync by a dedicated theme effect. Sources/layers are
-  // re-added after every basemap swap, so reading p.theme here restores the right
-  // colour on each swap too.
+  // Sits above context washes, below the threatened fill. Colour is theme-driven
+  // and kept in sync by a dedicated theme effect (re-read here on every basemap swap).
   map.addLayer({
     id: LYR.lostFill,
     type: "fill",
@@ -400,18 +356,14 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
 }
 
 /**
- * Fly the camera to the selected patch's centroid. No-op when nothing is
- * selected or the feature isn't in the current data. Shared by the one-time
- * `load` handler (so a `/forest/<id>` deep link frames its patch as soon as the
- * map is ready) and the selection effect (clicks/search after mount) so both
- * paths frame a patch identically. `Math.max(getZoom(), 13.5)` zooms in from the
- * Singapore overview but never pulls back if the user is already closer.
+ * Fly the camera to a patch's centroid. No-op when nothing is selected or the
+ * feature isn't in the current data. Shared by the mount `load` handler (so a
+ * `/forest/<id>` deep link frames immediately) and the selection effect, so both
+ * paths frame identically. Zooms in from the overview but never pulls back.
  */
 function flyToPoint(map: mapboxgl.Map, lon: number, lat: number) {
-  // On phones the detail bottom-sheet opens to ~half height and would cover a
-  // screen-centred patch, so pad the bottom of the fly's framing box by the
-  // sheet's coverage — the patch then frames in the visible upper half. Desktop
-  // (sheet absent) uses no padding.
+  // Phones: pad the bottom by the sheet's ~half-height coverage so the patch
+  // frames in the visible upper half. Desktop (no sheet) uses no padding.
   const padding = isMobileViewport()
     ? { bottom: Math.round(window.innerHeight * 0.45) }
     : undefined;
@@ -452,11 +404,10 @@ function flyToSelectedLost(
 }
 
 /**
- * Per-layer hover behaviour, declared once so the four layers can't drift on it —
- * which is exactly how the pointer cursor ended up set on only two of four
- * hand-written handlers. `cursor` shows the pointer (and resets it on leave);
- * `coveredBy` defers to layers painted on top (the more specific patch wins);
- * `featureStateHover` toggles the `{hover}` feature-state the threatened paint reads.
+ * Per-layer hover behaviour, declared once so layers can't drift (this is how the
+ * pointer cursor previously ended up set on only two of four handlers). `cursor`
+ * shows/resets the pointer; `coveredBy` defers to layers painted on top;
+ * `featureStateHover` toggles the `{hover}` state the threatened paint reads.
  */
 interface HoverBinding {
   layer: string;
@@ -465,11 +416,9 @@ interface HoverBinding {
   cursor: boolean;
   coveredBy: string[];
   featureStateHover: boolean;
-  /**
-   * Show this layer's popup on a phone *tap* (there's no hover on touch). True for
-   * the non-selectable context layers (zones, forest) whose only affordance is the
-   * popup; the selectable layers (threatened, cleared) open the detail sheet instead.
-   */
+  /** Show this layer's popup on a phone tap (no hover on touch). True for
+   *  non-selectable context layers (zones, forest); selectable layers open the
+   *  detail sheet instead. */
   peekable: boolean;
 }
 
@@ -496,9 +445,8 @@ const HOVER_BINDINGS: HoverBinding[] = [
     layer: LYR.zonesFill,
     source: SRC.zones,
     describe: (p) => describeZonePopup(p as DevelopmentZoneProperties),
-    // A popup appears on hover, so signal interactivity like the other layers —
-    // even though zones aren't selectable (on phones a tap peeks; see the click
-    // handler). Fixes the drift where only threatened/cleared showed the pointer.
+    // Signals interactivity like the other layers even though zones aren't
+    // selectable — fixes the drift where only threatened/cleared showed the pointer.
     cursor: true,
     coveredBy: [LYR.threatFill, LYR.lostFill],
     featureStateHover: false,
@@ -517,10 +465,9 @@ const HOVER_BINDINGS: HoverBinding[] = [
 
 /**
  * Binds one layer's hover popup + cursor + feature-state highlight from its
- * {@link HoverBinding}. On phones there's no true hover (a tap fires a synthetic
- * mousemove) and the bottom sheet carries the detail, so popups are suppressed —
- * see isMobileViewport. Feature properties are validated at load by lib/data and
- * preserved verbatim by the GeoJSON source, so `describe` casts them to its schema type.
+ * {@link HoverBinding}. Suppressed on phones (see isMobileViewport) since taps
+ * fire a synthetic mousemove and the sheet already shows the detail. Properties
+ * are pre-validated by lib/data, so `describe` casts them to its schema type.
  */
 function bindHover(
   map: mapboxgl.Map,
@@ -566,12 +513,11 @@ function bindHover(
 }
 
 /**
- * Imperative Mapbox GL map. The map object lives outside React's render cycle
- * (in refs); props are mirrored into `propsRef` so the one-time `load` handler
- * always sees the latest data, and dedicated effects push prop changes into the
- * map (data → setData, selection/filter → feature-state/filter, visibility →
- * layout property). Feature ids come from each feature's `id` property via
- * `promoteId`, so `feature-state` can key on it.
+ * Imperative Mapbox GL map. The map lives outside React's render cycle (in
+ * refs); props mirror into `propsRef` so async handlers see fresh data, and
+ * dedicated effects push prop changes in (data → setData, selection → feature-
+ * state/filter, visibility → layout property). Feature ids come from `id` via
+ * `promoteId` so feature-state can key on it.
  */
 export function MapView(props: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -582,14 +528,12 @@ export function MapView(props: MapViewProps) {
   const selectedRef = useRef<number | null>(null);
   const selectedLostRef = useRef<string | null>(null);
 
-  // Basemap is a map-only concern (no other component reads it), so it lives here
-  // rather than being lifted like colorMode. Defaults to the Standard style the
-  // map first mounts with.
+  // Map-only concern (nothing else reads it), so it lives here rather than being
+  // lifted like colorMode. Defaults to the Standard style the map mounts with.
   const [basemap, setBasemap] = useState<Basemap>("standard");
 
-  // Mirror latest props so the async `load` handler and event handlers read fresh
-  // values. useRef seeds `current` with the initial props; this effect keeps it in
-  // sync on every commit (updating a ref during render is disallowed).
+  // Seeded with initial props; kept in sync every commit (can't update a ref
+  // during render) so the async `load` handler and event handlers see fresh data.
   const propsRef = useRef(props);
   useEffect(() => {
     propsRef.current = props;
@@ -600,12 +544,8 @@ export function MapView(props: MapViewProps) {
     if (!containerRef.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Mount default is the Standard basemap; later switches go through the
-    // basemap effect below (setStyle + re-install layers + re-apply config). Must
-    // match the initial `basemap` state so the effect doesn't immediately re-swap
-    // on first load. The Standard `basemap` config and the fixed opening camera
-    // are set here; the camera is shared with the Satellite option (setStyle keeps
-    // the camera across a basemap swap).
+    // Must match initial `basemap` state or the basemap effect re-swaps on first
+    // load. Camera is shared across basemaps (setStyle preserves it on swap).
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLES.standard,
@@ -615,13 +555,9 @@ export function MapView(props: MapViewProps) {
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
-    // "Go to my current location". Mapbox's own control covers desktop and mobile
-    // in one: a touch-sized button beside the zoom controls, the browser
-    // Geolocation prompt, a live location dot with accuracy circle, and (on
-    // phones) the device heading. `trackUserLocation` keeps the dot following the
-    // user and gives the button its centered/tracking states; high accuracy asks
-    // for GPS on mobile. Geolocation needs a secure context — works on localhost
-    // and the HTTPS deploy. A denied/failed fix is surfaced as a brief notice.
+    // Mapbox's built-in "go to my location" control: button, Geolocation prompt,
+    // live accuracy dot, device heading on phones. Needs a secure context (works
+    // on localhost + the HTTPS deploy); a denied/failed fix surfaces as a notice.
     const geolocate = new mapboxgl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       trackUserLocation: true,
@@ -635,10 +571,8 @@ export function MapView(props: MapViewProps) {
       }
     });
 
-    // mapbox-gl.css forces `.mapboxgl-map { position: relative }`, and the flex/
-    // dynamic-import mount can settle the container size *after* init. Keep the
-    // canvas in sync on resize; the camera is a fixed center/zoom, so it needs no
-    // re-framing — resize() re-renders the same view at the new container size.
+    // The flex/dynamic-import mount can settle container size after init — keep
+    // the canvas in sync. Camera is fixed, so resize() just re-renders at the new size.
     const resizeObserver = new ResizeObserver(() => {
       map.resize();
     });
@@ -654,46 +588,38 @@ export function MapView(props: MapViewProps) {
 
     map.on("load", () => {
       const p = propsRef.current;
-      // Mount always starts on the Standard style (set above), so install with
-      // the Standard fill opacities; later basemap swaps re-install via the
+      // Mounts on Standard (set above); later basemap swaps re-install via the
       // basemap effect with the then-current basemap.
       addSourcesAndLayers(map, p, "standard");
       selectedRef.current = p.selectedId;
       selectedLostRef.current = p.selectedLostId;
       readyRef.current = true;
-      // Frame an initial selection (a `/forest/<id>` deep link): the selection
-      // effect already ran and bailed while readyRef was false, so it won't
-      // re-fire on its own — fly here now that the map is ready. Only one of the
-      // two can be set (they're mutually exclusive), so both calls are safe.
+      // Frame an initial selection (`/forest/<id>` deep link): the selection
+      // effect already bailed while readyRef was false, so fly here instead.
+      // selectedId/selectedLostId are mutually exclusive, so both calls are safe.
       flyToSelected(map, p.threatened, p.selectedId);
       flyToSelectedLost(map, p.deforested, p.selectedLostId);
 
-      // --- interaction (bound once; survives basemap style swaps) ---
-      // Hover popup + cursor + highlight per layer, driven by HOVER_BINDINGS so
-      // the four layers can't drift (see bindHover). Click/selection is separate,
-      // below — only the threatened + cleared layers are selectable.
+      // --- interaction (bound once; survives basemap swaps) ---
+      // Click/selection is separate below — only threatened + cleared are selectable.
       for (const binding of HOVER_BINDINGS) bindHover(map, popup, binding, hoveredRef);
 
       map.on("click", (e) => {
         const p = propsRef.current;
-        // On phones there's no hover, so a tap is the only affordance. Clear any
-        // prior peek popup up front; a selectable hit opens the sheet (below), and
-        // a bare zone/forest tap shows its transient peek popup (further below).
+        // Phones have no hover, so a tap is the only affordance — clear any prior
+        // peek popup up front.
         const mobile = isMobileViewport();
         if (mobile) popup.remove();
-        // The headline vulnerable layer wins when it's under the cursor (it also
-        // renders on top); otherwise fall to an already-cleared scar; an empty
-        // click clears both. queryRenderedFeatures skips hidden layers, so a
-        // toggled-off layer isn't clickable. Lost ids are UUID strings.
+        // Threatened wins when hit (also renders on top); else fall to a cleared
+        // scar; empty click clears both. Hidden layers aren't clickable
+        // (queryRenderedFeatures skips them). Lost ids are UUID strings.
         const threatHits = map.queryRenderedFeatures(e.point, {
           layers: [LYR.threatFill],
         });
         if (threatHits.length) {
           const id = Number(threatHits[0].id);
-          // Re-clicking the already-selected patch leaves `selectedId`
-          // unchanged, so the selection effect won't re-fire — fly here so a
-          // click *always* re-frames, even after the user has panned away.
-          // A click on a different patch changes state and lets the effect fly.
+          // Re-clicking the selected patch leaves state unchanged (no effect
+          // re-fire), so fly here to always re-frame even after panning away.
           if (id === p.selectedId) {
             const pr = threatHits[0].properties as {
               centroid_lon?: number;
@@ -714,7 +640,7 @@ export function MapView(props: MapViewProps) {
         });
         if (lostHits.length) {
           const uid = String(lostHits[0].id);
-          // Same re-selection guard as the threatened layer above.
+          // Same re-click guard as the threatened layer above.
           if (uid === p.selectedLostId) {
             const pr = lostHits[0].properties as {
               centroid_lon?: number;
@@ -730,10 +656,9 @@ export function MapView(props: MapViewProps) {
           p.onSelectLost(uid);
           return;
         }
-        // Phones only: a bare development-zone / forest tap has no selectable card,
-        // so show its info in the transient popup — the touch equivalent of the
-        // desktop hover popover (restores what suppressing mobile hover removed).
-        // HOVER_BINDINGS is in cover order, so zones win over forest.
+        // Phones only: a bare zone/forest tap has no selectable card, so show its
+        // popup instead — the touch equivalent of desktop hover. HOVER_BINDINGS is
+        // in cover order, so zones win over forest.
         if (mobile) {
           for (const b of HOVER_BINDINGS) {
             if (!b.peekable) continue;
@@ -857,10 +782,9 @@ export function MapView(props: MapViewProps) {
   }, [props.colorMode, basemap]);
 
   // --- theme: re-tint the Street basemap live ----------------------------
-  // Flipping the app's light/dark just swaps the Standard `basemap` config
-  // (setConfig — no setStyle, no layer rebuild). Satellite has no config to
-  // tint, so it's a no-op there; its effect re-runs on basemap change so the
-  // config lands as soon as the user switches back to Street.
+  // Flipping theme just swaps the Standard config (setConfig, no rebuild).
+  // No-op on Satellite (no config); re-runs on basemap change so it lands when
+  // switching back to Street.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current || basemap !== "standard") return;
@@ -868,11 +792,9 @@ export function MapView(props: MapViewProps) {
   }, [props.theme, basemap]);
 
   // --- theme: recolour the already-cleared fill live ---------------------
-  // In "status" mode the lost-forest fill flips near-white (dark app theme) /
-  // dark grey (light) so it stays a visible "scar" in both. In "landuse" mode the
-  // scar wears its URA zoning colour (theme-independent), so this is a no-op there
-  // — passing the mode keeps a theme flip from clobbering the zoning colours. A
-  // plain setPaintProperty — no style rebuild.
+  // "status" mode flips the cleared fill near-white/dark-grey so it stays a
+  // visible scar in both themes. "landuse" mode's zoning colour is
+  // theme-independent, so this is a no-op there. Plain setPaintProperty, no rebuild.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
@@ -884,10 +806,8 @@ export function MapView(props: MapViewProps) {
   }, [props.theme, props.colorMode]);
 
   // --- basemap: swap the base style, then re-install our layers -----------
-  // setStyle replaces the whole style, dropping every custom source/layer and
-  // all feature-state. The camera is preserved, so the user keeps their view; we
-  // just rebuild our overlay on the new basemap once it loads. Skipped until the
-  // first `load` (readyRef) so it never fires against the mount style.
+  // setStyle replaces the whole style, dropping every custom source/layer/state.
+  // Camera is preserved. Skipped until first `load` so it never fires on mount.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
@@ -897,9 +817,8 @@ export function MapView(props: MapViewProps) {
     map.setStyle(BASEMAP_STYLES[basemap]);
     map.once("style.load", () => {
       const p = propsRef.current;
-      // A style swap resets config to the new style's defaults, so re-apply the
-      // Standard basemap treatment for the current theme. The Satellite raster
-      // style has no `basemap` import to configure, so it's skipped there.
+      // Style swap resets config to defaults — re-apply Standard's theme config.
+      // Satellite has no `basemap` import, so it's skipped there.
       if (basemap === "standard") {
         map.setConfig("basemap", standardBasemapConfig(propsRef.current.theme));
       }
@@ -914,17 +833,12 @@ export function MapView(props: MapViewProps) {
     <div className={cn("relative h-full w-full", props.className)}>
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* Map encoding toggles. Desktop: a row near the top-right, kept clear of
-          the corner zoom controls (sm:right-16 leaves a gap). Phones: a row in
-          the top-left corner — the bottom-right corner is now under the detail
-          sheet and the top-right holds the zoom/locate controls, leaving the
-          top-left as the only free corner. Each control sizes to its content
-          (flex-none); the pair wraps only on the very narrowest phones. */}
+      {/* Map encoding toggles. Desktop: row near top-right (sm:right-16 clears the
+          zoom controls). Phones: top-left, since top-right holds zoom/locate and
+          bottom-right is under the detail sheet. */}
       <div className="absolute top-3 left-3 z-10 flex flex-row flex-wrap items-start gap-2 sm:left-auto sm:right-16 sm:flex-nowrap">
-        {/* Colour mode is a plain on/off: off is the default alarm red ("status"),
-            on recolours each patch by its URA zoning. A single labelled switch
-            (rather than a two-option toggle with an opaque "Status" label) is
-            smaller and says exactly what turning it on does. */}
+        {/* Off = alarm red ("status"), on = colour by URA zoning. A single
+            labelled switch says what it does; an opaque "Status" toggle wouldn't. */}
         <SwitchControl
           label="URA zoning"
           ariaLabel="Colour vulnerable forest by URA zoning"
@@ -951,10 +865,9 @@ const BASEMAP_OPTIONS: { key: Basemap; label: string }[] = [
 ];
 
 /**
- * On-map segmented control — the "Colour by" and "Basemap" pickers in the
- * bottom-left cluster. Visible on every breakpoint (each changes a primary map
- * encoding); interactive, so it opts back into pointer events inside the
- * otherwise-passive overlay cluster.
+ * On-map segmented control — "Colour by" / "Basemap" pickers. Always visible
+ * (each changes a primary map encoding); opts back into pointer events inside
+ * the otherwise-passive overlay cluster.
  */
 function SegmentedControl<T extends string>({
   label,
@@ -1006,10 +919,9 @@ function SegmentedControl<T extends string>({
 }
 
 /**
- * On-map on/off switch, sharing the segmented control's card chrome so the two sit
- * flush in the same cluster. The label always shows (unlike the segmented control's
- * sm-only label) because here the label *is* the meaning — it names what the switch
- * turns on. Interactive, so it opts back into pointer events in the passive overlay.
+ * On-map switch, sharing the segmented control's chrome. Label always shows
+ * (unlike the segmented control's sm-only label) since here the label *is* the
+ * meaning. Opts back into pointer events in the passive overlay.
  */
 function SwitchControl({
   label,
