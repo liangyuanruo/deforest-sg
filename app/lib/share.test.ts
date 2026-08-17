@@ -74,7 +74,7 @@ describe("shareText", () => {
 });
 
 describe("channel deep-links", () => {
-  const shareUrl = "https://deforest-sg.vercel.app/forest/42?utm_source=whatsapp";
+  const shareUrl = "https://deforest.sg/forest/42?utm_source=whatsapp";
   const text = "Maju Forest is threatened.";
 
   it("builds a wa.me link with the text and url combined and encoded", () => {

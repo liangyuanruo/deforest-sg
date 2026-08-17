@@ -250,7 +250,7 @@ export function Explorer({
               a small visual pun on deforestation. See .deforest-logo in
               globals.css (pivots at the trunk base; honours reduced-motion). */}
           <TreePine className="deforest-logo size-5 text-primary" />
-          <h1 className="hidden text-sm font-semibold sm:block">Deforest SG</h1>
+          <h1 className="hidden text-sm font-semibold sm:block">deforest.sg</h1>
         </div>
 
         <div className="flex min-w-0 flex-1 items-center sm:flex-none">

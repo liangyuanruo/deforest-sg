@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const TITLE = "Deforest SG — Singapore's vulnerable forests";
+const TITLE = "deforest.sg — Singapore's vulnerable forests";
 const DESCRIPTION =
   "See which Singapore forests are zoned for development under the Master Plan 2025.";
 
@@ -23,13 +23,13 @@ export const metadata: Metadata = {
   // Resolves relative OG/canonical URLs (including the per-forest `/forest/<id>`
   // pages) against the real production domain Vercel reports.
   metadataBase: new URL(productionBaseUrl() ?? SITE_URL),
-  applicationName: "Deforest SG",
+  applicationName: "deforest.sg",
   title: TITLE,
   description: DESCRIPTION,
-  appleWebApp: { capable: true, title: "Deforest SG", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "deforest.sg", statusBarStyle: "default" },
   openGraph: {
     type: "website",
-    siteName: "Deforest SG",
+    siteName: "deforest.sg",
     title: TITLE,
     description: DESCRIPTION,
     url: "/",

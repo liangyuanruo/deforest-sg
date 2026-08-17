@@ -6,7 +6,7 @@
 
 /** Fallback origin when no Vercel domain is exposed. Prefer
  *  {@link productionBaseUrl}, which reads the canonical injected domain. */
-export const SITE_URL = "https://deforest-sg.vercel.app";
+export const SITE_URL = "https://deforest.sg";
 
 /**
  * Canonical production origin, from Vercel's injected

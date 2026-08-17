@@ -32,7 +32,7 @@ export async function generateMetadata({
     const site = await getForestById(Number(id));
     if (!site) return {};
 
-    const title = `${site.label} — Deforest SG`;
+    const title = `${site.label} — deforest.sg`;
     const description = `${formatHa(site.area_ha)} of ${site.label} (${formatPercent(
       site.threatened_fraction,
     )} of the patch) is zoned for development under Singapore's Master Plan 2025.`;
@@ -50,7 +50,7 @@ export async function generateMetadata({
   const cleared = await getClearedByUid(id);
   if (!cleared) return {};
 
-  const title = `${cleared.name} — Deforest SG`;
+  const title = `${cleared.name} — deforest.sg`;
   const zoned = cleared.dominant_lu_desc
     ? `, now zoned ${cleared.dominant_lu_desc}`
     : "";

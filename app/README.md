@@ -1,4 +1,4 @@
-# Deforest SG — app
+# deforest.sg — app
 
 Interactive dashboard for the [`deforest`](../README.md) analysis: which Singapore
 forest the URA Master Plan 2025 zones for development. Next.js 16 (App Router, Turbopack)

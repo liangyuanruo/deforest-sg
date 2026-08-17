@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * Web app manifest — reuses the top-bar identity (the TreePine mark + the
- * "Deforest SG" name) so an installed/added-to-home-screen instance matches the
+ * "deforest.sg" name) so an installed/added-to-home-screen instance matches the
  * app chrome. The tree icon is `public/icon.svg` (the same glyph as the header),
  * declared both `any` and `maskable` so Android crops it cleanly. `favicon.ico`
  * is the multi-size raster of the same TreePine glyph (16/32/48, generated from
@@ -10,8 +10,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Deforest SG",
-    short_name: "Deforest SG",
+    name: "deforest.sg",
+    short_name: "deforest.sg",
     description:
       "See which Singapore forests are zoned for development under the Master Plan 2025.",
     start_url: "/",

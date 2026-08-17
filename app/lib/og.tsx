@@ -83,7 +83,7 @@ export function renderOgImage() {
             display: "flex",
           }}
         >
-          Deforest SG
+          deforest.sg
         </div>
         <div
           style={{
@@ -134,7 +134,7 @@ export function renderForestOgImage(site: ThreatenedProperties) {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <TreeGlyph size={52} stroke="#ffffff" />
           <div style={{ display: "flex", fontSize: 34, fontWeight: 700 }}>
-            Deforest SG
+            deforest.sg
           </div>
         </div>
 
@@ -225,7 +225,7 @@ export function renderClearedOgImage(site: DeforestedProperties) {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <TreeGlyph size={52} stroke="#ffffff" />
           <div style={{ display: "flex", fontSize: 34, fontWeight: 700 }}>
-            Deforest SG
+            deforest.sg
           </div>
         </div>
 
