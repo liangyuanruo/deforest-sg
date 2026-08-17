@@ -151,7 +151,6 @@ export function Explorer({
     () => (isFiltering ? landUseFilteredSites.map((s) => s.id) : null),
     [isFiltering, landUseFilteredSites],
   );
-  const totalForestHa = summary?.totals.total_forest_ha_sg ?? 0;
 
   const selectedSite = useMemo(
     () => sites.find((s) => s.id === selectedId) ?? null,
@@ -356,7 +355,6 @@ export function Explorer({
               ) : (
                 <StatsPanel
                   sites={landUseFilteredSites}
-                  totalForestHa={totalForestHa}
                   colorMode={colorMode}
                   theme={theme}
                 />
@@ -385,10 +383,7 @@ export function Explorer({
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <StatsHeadline
-                      sites={landUseFilteredSites}
-                      totalForestHa={totalForestHa}
-                    />
+                    <StatsHeadline sites={landUseFilteredSites} />
                   </div>
                 )
               }
@@ -400,10 +395,8 @@ export function Explorer({
               ) : (
                 <StatsBreakdown
                   sites={landUseFilteredSites}
-                  totalForestHa={totalForestHa}
                   colorMode={colorMode}
                   theme={theme}
-                  hideFigures
                   hideStatusKey
                 />
               )}
