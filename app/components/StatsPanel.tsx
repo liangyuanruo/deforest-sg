@@ -74,7 +74,7 @@ export function StatsPanel({
   return (
     <div
       className={cn(
-        "w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border/60 bg-card/90 shadow-sm backdrop-blur",
+        "w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border/60 bg-card/90 shadow-sm backdrop-blur",
         className,
       )}
     >
@@ -111,16 +111,18 @@ export function StatsHeadline({ sites }: { sites: ThreatenedProperties[] }) {
   const threatenedHa = sites.reduce((sum, s) => sum + s.area_ha, 0);
   return (
     <>
-      <TreePine className="size-4 shrink-0 text-primary" />
-      <span className="flex min-w-0 flex-col leading-tight">
-        <span className="text-base font-semibold tabular-nums text-foreground">
+      <TreePine className="size-5 shrink-0 text-primary sm:size-4" />
+      <span className="flex min-w-0 flex-1 items-end gap-2 sm:flex-col sm:items-start sm:gap-0">
+        <span className="shrink-0 whitespace-nowrap text-xl font-semibold leading-none tabular-nums text-foreground sm:text-base sm:leading-tight">
           {formatHa(threatenedHa)}
         </span>
-        <span className="text-[11px] text-muted-foreground">
-          of vulnerable forests
-        </span>
-        <span className="text-[11px] text-muted-foreground/80">
-          {formatFootballFields(threatenedHa)}
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-1 leading-tight sm:flex-col sm:gap-x-0">
+          <span className="text-[11px] text-muted-foreground">
+            of vulnerable forests
+          </span>
+          <span className="text-[11px] text-muted-foreground/80">
+            {formatFootballFields(threatenedHa)}
+          </span>
         </span>
       </span>
     </>
