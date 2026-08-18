@@ -131,9 +131,10 @@ export interface LandUseOption {
 }
 
 /**
- * Returns the distinct `dominant_lu_desc` values present in `sites`, each
- * with a count of how many sites carry it. Sorted by count DESC, then
- * `luDesc` ASC — suitable for driving filter-chip UI.
+ * Returns the distinct `dominant_lu_desc` values present in `sites`, each with
+ * a count of how many sites carry it. Sorted alphabetically so a chip stays put
+ * as the filtered set changes — a count-ranked order reshuffles under the
+ * pointer.
  */
 export function landUseOptions(
   sites: ThreatenedProperties[],
@@ -147,9 +148,6 @@ export function landUseOptions(
   }
 
   return Array.from(counts, ([luDesc, count]) => ({ luDesc, count })).sort(
-    (a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.luDesc.localeCompare(b.luDesc);
-    },
+    (a, b) => a.luDesc.localeCompare(b.luDesc),
   );
 }

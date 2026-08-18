@@ -45,7 +45,7 @@ export const MAP_LAYERS: MapLayerMeta[] = [
     key: "threatened",
     label: "Vulnerable forest",
     swatch: "#dc2626",
-    description: "Where the two source layers overlap",
+    description: "Where mapped forest overlap with development zones",
     role: "result",
     shortLabel: "vulnerable forest",
   },

@@ -244,26 +244,26 @@ describe("landUseOptions", () => {
     const result = landUseOptions(sites);
 
     expect(result).toEqual([
-      { luDesc: "RESIDENTIAL", count: 2 },
       { luDesc: "RESERVE SITE", count: 1 },
+      { luDesc: "RESIDENTIAL", count: 2 },
     ]);
   });
 
-  it("orders by count DESC then luDesc ASC", () => {
+  it("orders alphabetically by luDesc, regardless of count", () => {
     const sites = [
       makeSite({ dominant_lu_desc: "ZEBRA ZONE" }),
       makeSite({ dominant_lu_desc: "ALPHA ZONE" }),
       makeSite({ dominant_lu_desc: "ZEBRA ZONE" }),
       makeSite({ dominant_lu_desc: "BETA ZONE" }),
-      makeSite({ dominant_lu_desc: "ALPHA ZONE" }),
+      makeSite({ dominant_lu_desc: "ZEBRA ZONE" }),
     ];
 
     const result = landUseOptions(sites);
 
     expect(result).toEqual([
-      { luDesc: "ALPHA ZONE", count: 2 },
-      { luDesc: "ZEBRA ZONE", count: 2 },
+      { luDesc: "ALPHA ZONE", count: 1 },
       { luDesc: "BETA ZONE", count: 1 },
+      { luDesc: "ZEBRA ZONE", count: 3 },
     ]);
   });
 
