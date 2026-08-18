@@ -32,6 +32,13 @@ export interface MapLayerMeta {
   shortLabel: string;
 }
 
+/**
+ * The development-zones fill in "status" colour mode — the same blue the legend
+ * swatch shows. Single source of truth for both, so the chip can't drift from the
+ * parcels. ("landuse" mode repaints the layer per parcel from the URA palette.)
+ */
+export const ZONES_FILL_COLOR = "#2563eb";
+
 /** Ordered most-important first (threatened forest is the headline layer). */
 export const MAP_LAYERS: MapLayerMeta[] = [
   {
@@ -53,7 +60,7 @@ export const MAP_LAYERS: MapLayerMeta[] = [
   {
     key: "zones",
     label: "Development zones",
-    swatch: "#2563eb",
+    swatch: ZONES_FILL_COLOR,
     description: "Building-zoned land that touches forest (Master Plan 2025)",
     role: "source",
     shortLabel: "development zones",
@@ -88,8 +95,8 @@ export const LOST_FILL_COLOR: Record<Theme, string> = {
  * `swatch`; the theme-flipped "lost" scar resolves per theme. Route every legend
  * chip through this so the key and the map can't diverge.
  *
- * (The `zones` swatch is representative only — that layer is painted per parcel
- * from the URA palette, so no single colour matches every parcel by design.)
+ * (The `zones` swatch matches the layer in "status" mode; in "landuse" mode that
+ * layer paints per parcel from the URA palette, which the breakdown already keys.)
  */
 export function swatchForLayer(layer: MapLayerMeta, theme: Theme): string {
   return layer.key === "lost" ? LOST_FILL_COLOR[theme] : layer.swatch;

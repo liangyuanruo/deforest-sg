@@ -15,6 +15,7 @@ import {
 import type { Theme } from "@/components/ThemeToggle";
 import {
   LOST_FILL_COLOR,
+  ZONES_FILL_COLOR,
   type ColorMode,
   type MapLayerVisibility,
 } from "@/lib/layers";
@@ -200,9 +201,12 @@ const LANDUSE_FILL_OPACITY = ["case", SELECTED, 0.82, HOVER, 0.7, 0.6];
 // imagery to preserve, so fills paint solid there and selection reads via colour.
 const SOLID_FILL_OPACITY = 1;
 
-// Satellite-tuned opacities for the two context washes.
-const FOREST_FILL_OPACITY = 0.14;
-const ZONES_FILL_OPACITY = 0.28;
+// The two source layers are washes, never solid — where forest and zones overlap
+// the blend has to read as its own colour, which an opaque fill would hide. Flat
+// Standard carries more ink than Satellite, where imagery must stay legible under
+// them; below ~0.5 on Standard the paler URA zoning colours stop reading.
+const FOREST_FILL_OPACITY: Record<Basemap, number> = { standard: 0.55, satellite: 0.28 };
+const ZONES_FILL_OPACITY: Record<Basemap, number> = { standard: 0.55, satellite: 0.3 };
 
 // Cleared forests read as bleached "scars": theme-flipped neutral (near-white
 // dark / dark-grey light), higher opacity than the context washes so they read
@@ -235,14 +239,19 @@ function threatenedFillOpacity(mode: ColorMode, basemap: Basemap): unknown {
   return mode === "landuse" ? LANDUSE_FILL_OPACITY : STATUS_FILL_OPACITY;
 }
 
-/** Solid on Standard, the given satellite-tuned opacity on Satellite. */
-function contextFillOpacity(basemap: Basemap, satelliteOpacity: number): number {
-  return basemap === "standard" ? SOLID_FILL_OPACITY : satelliteOpacity;
+/**
+ * Development-zone fill. "landuse" mode paints each parcel its URA zoning colour;
+ * "status" mode paints the whole layer the legend's blue, so it reads as one
+ * source layer rather than a second zoning map.
+ */
+function zonesFillColor(mode: ColorMode): unknown {
+  return mode === "landuse" ? landUseFillExpression("lu_desc") : ZONES_FILL_COLOR;
 }
 
 /**
- * Push the active colour mode's paint onto the threatened layer. Cleared scars'
- * "landuse" recolour is owned by the theme effect instead, so both share one path.
+ * Push the active colour mode's paint onto the threatened and zone layers.
+ * Cleared scars' "landuse" recolour is owned by the theme effect instead, so both
+ * share one path.
  */
 function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
   const isLandUse = mode === "landuse";
@@ -256,11 +265,12 @@ function applyColorMode(map: mapboxgl.Map, mode: ColorMode, basemap: Basemap) {
     "fill-opacity",
     threatenedFillOpacity(mode, basemap) as never,
   );
+  map.setPaintProperty(LYR.zonesFill, "fill-color", zonesFillColor(mode) as never);
 }
 
 /**
- * Sync the URA zones layer to visibility. Each parcel paints its zoning colour
- * (keyed on `lu_desc`); with outlines removed, the fill is its only rendering.
+ * Sync the URA zones layer to visibility. Colour comes from the active mode
+ * (`zonesFillColor`); with outlines removed, the fill is its only rendering.
  */
 function syncZones(map: mapboxgl.Map, layers: MapLayerVisibility) {
   map.setLayoutProperty(LYR.zonesFill, "visibility", layers.zones ? "visible" : "none");
@@ -303,7 +313,7 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     source: SRC.forest,
     paint: {
       "fill-color": "#16a34a",
-      "fill-opacity": contextFillOpacity(basemap, FOREST_FILL_OPACITY),
+      "fill-opacity": FOREST_FILL_OPACITY[basemap],
       "fill-emissive-strength": 1,
     },
   });
@@ -313,8 +323,8 @@ function addSourcesAndLayers(map: mapboxgl.Map, p: MapViewProps, basemap: Basema
     source: SRC.zones,
     // Sits below the threatened fill so each patch paints on top of its parcel.
     paint: {
-      "fill-color": landUseFillExpression("lu_desc") as never,
-      "fill-opacity": contextFillOpacity(basemap, ZONES_FILL_OPACITY),
+      "fill-color": zonesFillColor(p.colorMode) as never,
+      "fill-opacity": ZONES_FILL_OPACITY[basemap],
       "fill-emissive-strength": 1,
     },
   });
